@@ -34,6 +34,36 @@ python -m pip install --upgrade pip setuptools wheel
 python -m pip install numpy google pandas matplotlib opencv-python torch
 ```
 
+### Environment configuration using `conda`
+
+1. First [download](https://docs.conda.io/en/latest/miniconda.html#latest-miniconda-installer-links) miniconda. Install it in your system using the following command (you may need to change the path of the script file):
+
+```bash
+bash ~/Downloads/Miniconda3-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda
+```
+
+2. Then create an environment and activate it:
+
+```bash
+conda create -p .venv python
+conda activate ./.venv
+```
+
+3. You can now start working normally! Remember to **select the python interpreter** appripriately. You can do so in Visual Studio Code using the toolbar for `.py` files:
+
+![](assets/Screenshot%202023-04-20%20at%2013.51.38.png)
+
+Or using the `Select Kernel` option for Jupyter Notebooks:
+
+![](assets/Screenshot%202023-04-20%20at%2013.52.49.png)
+
+4. It is recommended to install some basic DL packages as well:
+
+```bash
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install numpy google pandas matplotlib opencv-python torch
+```
+
 ## Installing tensorflow
 
 To install tensorflow, you can follow the instructions [here](https://www.tensorflow.org/install/pip#step-by-step_instructions).
