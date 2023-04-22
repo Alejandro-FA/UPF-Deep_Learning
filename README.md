@@ -3,7 +3,9 @@ Repository for sharing lab projects of Universitat Pompeu Fabra (UPF) Deep Learn
 
 ## Environment configuration
 
-It is very recommended to use a python virtual environment for all the labs of the subject. There are 2 recommended environments for doing so, [`miniconda`](https://docs.conda.io/en/latest/miniconda.html#) or [`venv`](https://docs.python.org/3/library/venv.html). Below you can find the steps for both types of environments:
+It is very recommended to use a python virtual environment for all the labs of the subject. There are 2 recommended environments for doing so, [`miniconda`](https://docs.conda.io/en/latest/miniconda.html#) or [`venv`](https://docs.python.org/3/library/venv.html). Below you can find the steps for `venv` environments.
+
+It is recommended to use **Python 3.10**, since Python 3.11 is not properly supported by all libraries yet. You can check your python version with `python --version` or `python3 --version`.
 
 ### Environment configuration using `venv`
 
@@ -31,37 +33,7 @@ Or using the `Select Kernel` option for Jupyter Notebooks:
 
 ```bash
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install numpy google pandas matplotlib opencv-python torch
-```
-
-### Environment configuration using `conda`
-
-1. First [download](https://docs.conda.io/en/latest/miniconda.html#latest-miniconda-installer-links) miniconda. Install it in your system using the following command (you may need to change the path of the script file):
-
-```bash
-bash ~/Downloads/Miniconda3-latest-MacOSX-x86_64.sh -b -p $HOME/miniconda
-```
-
-2. Then create an environment and activate it:
-
-```bash
-conda create -p .venv python
-conda activate ./.venv
-```
-
-3. You can now start working normally! Remember to **select the python interpreter** appripriately. You can do so in Visual Studio Code using the toolbar for `.py` files:
-
-![](assets/Screenshot%202023-04-20%20at%2013.51.38.png)
-
-Or using the `Select Kernel` option for Jupyter Notebooks:
-
-![](assets/Screenshot%202023-04-20%20at%2013.52.49.png)
-
-4. It is recommended to install some basic DL packages as well:
-
-```bash
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install numpy google pandas matplotlib opencv-python torch
+python -m pip install numpy google pandas matplotlib opencv-python torch ipykernel
 ```
 
 ## Installing tensorflow
