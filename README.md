@@ -33,7 +33,7 @@ Or using the `Select Kernel` option for Jupyter Notebooks:
 
 ```bash
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install numpy google pandas matplotlib opencv-python torch ipykernel
+python -m pip install numpy google pandas matplotlib ipympl opencv-python torch ipykernel
 ```
 
 ## Installing tensorflow
