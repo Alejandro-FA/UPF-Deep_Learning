@@ -286,6 +286,25 @@ plt.show()
 ## Tests for different values of beta
 ## We can do it this way since we are using a fixed random seed
 
-NN_momentum = MLP(hiddenNode=20)
+betas = [0.2, 0.4, 0.6, 0.8, 0.9]
+colors = ["red", "blue", "orange", "purple", "cyan"]
+assert len(betas) == len(colors)
+losses = {}
 #Train network with the data:
-momentum_list_loss = train_woptimizer(NN_momentum, X_train_norm, C_train, epoch=10000, optim=OptimMom(learning_rate=0.1, beta=0.9))
+for b in betas:
+    NN_momentum = MLP(hiddenNode=20)
+    temp_loss = train_woptimizer(NN_momentum, X_train_norm, C_train, epoch=10000, optim=OptimMom(learning_rate=0.1, beta=b))
+    losses[b] = temp_loss
+
+i = 0
+for beta in losses:
+    col = (np.random.random(), np.random.random(), np.random.random())
+    plt.plot(losses[beta], color=colors[i], label=f"Momentum error with beta {beta}")
+    i += 1
+
+plt.title("Loss evolution using SGD with momentum comparison", fontsize=14, fontweight="bold")
+plt.xlabel("Iterations")
+plt.ylabel("Loss value")
+plt.grid()
+plt.legend()
+plt.show()
