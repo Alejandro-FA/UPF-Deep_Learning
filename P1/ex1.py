@@ -140,7 +140,7 @@ train_list_loss, test_list_loss = train(NN, X_train_norm, X_test_norm, C_train, 
 ########################################### Cell 5
 
 def classify(NN, X):
-    yHat = NN.forward(X)
+    yHat = NN.forward(X, update=False)
     return yHat.round().astype(int)
 
 # Plot the training data as a scatter plot (for reference)
