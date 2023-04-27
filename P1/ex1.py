@@ -5,18 +5,18 @@ import matplotlib.pyplot as plt #  matplotlib for visualization
 data_path = 'P1/Data/'
 results_path = 'P1/Results/'
 
-seed_value = 10
+seed_value = 43
 np.random.seed(seed_value)
 
 # Load training and testing data
 train_data = pd.read_csv(data_path + "train.csv")
 test_data = pd.read_csv(data_path + "test.csv")
 
-X_train = train_data[["X", "Y"]].to_numpy(dtype=np.double)
-C_train = train_data["C"].to_numpy(dtype=np.int32).reshape(-1, 1)
+X_train = train_data[["X", "Y"]].to_numpy(dtype=np.float32)
+C_train = train_data["C"].to_numpy(dtype=np.float32).reshape(-1, 1)
 
-X_test = test_data[["X", "Y"]].to_numpy(dtype=np.double)
-C_test = test_data["C"].to_numpy(dtype=np.int32).reshape(-1, 1)
+X_test = test_data[["X", "Y"]].to_numpy(dtype=np.float32)
+C_test = test_data["C"].to_numpy(dtype=np.float32).reshape(-1, 1)
 
 ########################################### Cell 2
 
@@ -220,30 +220,29 @@ class OptimMom(object):
         self.lr = learning_rate
         self.beta = beta
         self.vt_previous = []
+
     # receive the parameters of the MLP and the computed gradients and update the latter
-    def step(self,weight_list,gradient, iteration):
+    def step(self,weight_list, gradient, iteration):
         uw = []
-        self.vt_previous = []
 
         if len(self.vt_previous) == 0:
-            for w in weight_list:
-                self.vt_previous.append(np.zeros(w.shape))
+            self.init_vt(weight_list)
         
         i = 0
         for w,grd in zip(weight_list,gradient):
-            vt = self.moving_average(grd, self.vt_previous[i]) 
-            
-            #FIXME: decide whether to use bias correction or not. 
-            vt = vt / (1 - self.beta**(iteration+1)) # bias correction
-            uw.append(w - self.lr * vt)
+            vt = self.beta * self.vt_previous[i] + self.lr * grd
+            uw.append(w - vt)
             self.vt_previous[i] = vt
             i += 1
             
         return uw
-
-    def moving_average(self, gradW, vt_prev):
-        # print("gradW", gradW)
-        return self.beta * vt_prev + (1 - self.beta) * gradW
+    
+    def init_vt(self, weight_list):
+        """
+        Initialize velocities to 0
+        """
+        for w in weight_list:
+            self.vt_previous.append(np.zeros(w.shape))
 
 
 
@@ -268,7 +267,8 @@ def train_woptimizer(NN,X, y,epoch = 5000,optim = None):
 
 NN_momentum = MLP(hiddenNode=20)
 #Train network with the data:
-momentum_list_loss = train_woptimizer(NN_momentum, X_train_norm, C_train, epoch=10000, optim=OptimMom(learning_rate=0.1, beta=0.9))
+optimizer = OptimMom(learning_rate=0.01, beta=0.9)
+momentum_list_loss = train_woptimizer(NN_momentum, X_train_norm, C_train, epoch=10000, optim=optimizer)
 
 
 fig6 = plt.figure()
@@ -293,7 +293,7 @@ losses = {}
 #Train network with the data:
 for b in betas:
     NN_momentum = MLP(hiddenNode=20)
-    temp_loss = train_woptimizer(NN_momentum, X_train_norm, C_train, epoch=10000, optim=OptimMom(learning_rate=0.1, beta=b))
+    temp_loss = train_woptimizer(NN_momentum, X_train_norm, C_train, epoch=10000, optim=OptimMom(learning_rate=0.01, beta=b))
     losses[b] = temp_loss
 
 i = 0
@@ -308,3 +308,102 @@ plt.ylabel("Loss value")
 plt.grid()
 plt.legend()
 plt.show()
+
+
+###########################
+import torch.nn as nn
+import torch
+
+torch.manual_seed(10)
+
+
+class MLP_PyTorch(nn.Module):
+    def __init__(self, inputNode=2, hiddenNode = 3, outputNode=1):   
+        super(MLP_PyTorch, self).__init__()     
+        #Define Hyperparameters
+        self.inputLayerSize = inputNode
+        self.outputLayerSize = outputNode
+        self.hiddenLayerSize = hiddenNode
+        
+        # Initialize two modules implementing the two linear layers of the MLP
+        self.linear_layer1 = nn.Linear(self.inputLayerSize, self.hiddenLayerSize) 
+        self.linear_layer2 = nn.Linear(self.hiddenLayerSize, self.outputLayerSize)
+        
+        self.activation_fun = nn.Sigmoid() # Module implementing the sigmoid funciton
+        self.loss = nn.MSELoss() # Module implementing the mean-squared error loss
+
+    # Define the forward pass of the module using the sub-modules declared in the initializer
+    def forward(self, X):
+        z1 = self.linear_layer1(X) # First Linear Layer   
+        a1 = self.activation_fun(z1) # activation function
+        z2 = self.linear_layer2(a1) # Second Linear Layer   
+        a2 = self.activation_fun(z2) # final activation function
+        y_hat = a2
+        return y_hat 
+
+# Function to train our MLP with PyTorch
+def train_PyTorch(NN, X_train, X_test, y_train, y_test, epoch = 10000, lr = .01, optimizer = None):
+    train_list_loss = []
+    test_list_loss = []
+
+    for i in range(epoch):
+        # reset optimizer at each epoch
+        optimizer.zero_grad() # not to accumulate gradient from previous steps, as we train in batches
+
+        # Process the dataset with the forward pass
+        yHat_train = NN.forward(X_train)
+        with torch.no_grad():
+            yHat_test = NN.forward(X_test)
+        
+        
+        test_loss_val = NN.loss(yHat_test, y_test)
+        train_loss_val = NN.loss(yHat_train, y_train)
+        
+        # Automatically compute the gradients
+        train_loss_val.backward()
+        # Call the optimizer to update the paramters
+        optimizer.step()
+        
+        # Print loss and save the value at each iteration
+        if i % 100 == 0 : 
+            print('Loss {}={}'.format(i,train_loss_val))
+    
+            train_list_loss.append(train_loss_val.item())
+            test_list_loss.append(test_loss_val.item())
+    
+    print('Loss {}={}'.format(i,train_loss_val))  
+    
+    return train_list_loss, test_list_loss
+
+
+# Initialize a Pytorch MLP
+NN = MLP_PyTorch(hiddenNode=20) 
+optimizer = torch.optim.SGD(NN.parameters(), lr=.01, momentum=0) 
+
+
+#Train MLP using Pytorch:
+# print(torch.tensor(np.array(([3,5], [5,1], [10,2],[4,2],[8,8],[6,5]), dtype=np.float32))
+torch_train_list_loss, torch_test_list_loss = train_PyTorch(
+    NN,
+    torch.from_numpy(X_train_norm),
+    torch.from_numpy(X_test_norm),
+    torch.from_numpy(C_train),
+    torch.from_numpy(C_test),
+    optimizer = optimizer
+)
+
+# Plot the evolution of the loss function during training
+fig8 = plt.figure()
+plt.plot(torch_train_list_loss, color = "black", label = "Torch Train loss")
+plt.plot(torch_test_list_loss, color = "red", label = "Torch Test loss")
+plt.plot(train_list_loss, color = "blue", label = "Train loss")
+plt.plot(test_list_loss, color = "green", label = "Test loss")
+plt.title("Loss evolution (Our implementation VS PyTorch)")
+plt.xlabel('Iterations')
+plt.ylabel('Loss Val')
+plt.legend()
+plt.grid()
+# plt.ylim([0,1])
+plt.show()
+
+# Train vs Test
