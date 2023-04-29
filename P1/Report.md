@@ -8,6 +8,34 @@ Andreu Garcies (240618), Alejandro Fernández (242349), Marc Aguilar (242192)
 
 ## Exercise 1
 
+First of all, after loading both train and test data we normalized it. Our first approach was doing it by dividing by the maximum value, but we were not getting correct results. Therefore, we decided to do it by substracting the mean and dividing by the standard deviation. 
+
+Here we can observe both plots, before  and after normalizing the dataset.
+
+![Figure 1](Results/fig1.png)
+![Figure 2](Results/fig2.png)
+
+### MLP class
+In order to implement the multi layer perceptron (MLP) we used the class structure that we were given in the examples. We kept the sigmoid as the activation function but we changed the loss, since the MSE was not the appropiate function for a classification problem. Our choice was the Cross Entropy loss since it is used for solving classification problems, as in our case. We changed both the `loss` and added `lossPrime` where we computed the derivative, consequently slightly modifying the `backward` to use this new function. 
+
+Our last modification to the MLP class was adding the parameter `update` to the `forward` function. We needed to do the plots where we compared the evolution of the loss between train and test data. 
+
+### Train and test phase
+We used the structure of the `train` function that we were given but we added another loss list in which we stored the values of the loss for the **test data**.
+
+We decided to keep both the number of epochs to `epoch=10000` and the learning rate `lr=0.01` for training. On the other hand, we set the number of **hidden neurons** up to **20** We can observe that the accuracy for the training dataset is very high **(97%)** as we initially expected. It only misclassifies 3 datapoints. 
+
+![Figure 3](Results/fig3.png)
+
+Then, regarding the evolution of the loss we can observe how the test one is higher than the train one and there is not a significant sign of overfitting. From iteration 80 the test loss seems to grow a little bit so we could get a little bit of overfitting but not very significant.
+
+![Figure 4](Results/fig4.png)
+
+Lastly, the classification of the test dataset gives us very good results too. As we can observe, it only misclassifies 3 datapoints. We reach an accuracy of **(88%)**, which is quite high. 
+
+![Figure 4](Results/fig5.png)
+
+
 ## Exercise 2
 
 ### Implementation details
