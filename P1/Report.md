@@ -1,15 +1,14 @@
 # Deep Learning Practice 1 report document
 
-Basic MLP implementation with Numpy/PyTorch using optimizers and autograd
+*Basic MLP implementation with Numpy/PyTorch using optimizers and autograd*
 
 Group 8
 
 Andreu Garcies (240618), Alejandro Fernández (), Marc Aguilar (242192)
 
-* Loss evaluated simultaneously on test and train?
+## Exercise 1
 
-* Which is the proper value to init Vts?
+## Exercise 2
 
-* Should we use the bias corrected version of Vt?
+## Exercise 3
 
-* SGD with momentum does not work better than regular GD - Solved
