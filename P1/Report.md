@@ -1,4 +1,10 @@
-# QUESTIONS LAB 1
+# Deep Learning Practice 1 report document
+
+Basic MLP implementation with Numpy/PyTorch using optimizers and autograd
+
+Group 8
+
+Andreu Garcies (240618), Alejandro Fernández (), Marc Aguilar (242192)
 
 * Loss evaluated simultaneously on test and train?
 
