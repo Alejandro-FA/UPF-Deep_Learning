@@ -12,8 +12,8 @@ First of all, after loading both train and test data we normalized it. Our first
 
 Here we can observe both plots, before  and after normalizing the dataset.
 
-![Figure 1](Results/fig1.png)
-![Figure 2](Results/fig2.png)
+<img src="Results/fig1.png" alt="Figure 1" style="zoom:33%;" />
+<img src="Results/fig2.png" alt="Figure 2" style="zoom:33%;" />
 
 ### MLP class
 In order to implement the multi layer perceptron (MLP) we used the class structure that we were given in the examples. We kept the sigmoid as the activation function but we changed the loss, since the MSE was not the appropiate function for a classification problem. Our choice was the Cross Entropy loss since it is used for solving classification problems, as in our case. We changed both the `loss` and added `lossPrime` where we computed the derivative, consequently slightly modifying the `backward` to use this new function. 
@@ -25,15 +25,15 @@ We used the structure of the `train` function that we were given but we added an
 
 We decided to keep both the number of epochs to `epoch=10000` and the learning rate `lr=0.01` for training. On the other hand, we set the number of **hidden neurons** up to **20** We can observe that the accuracy for the training dataset is very high **(97%)** as we initially expected. It only misclassifies 3 datapoints. 
 
-![Figure 3](Results/fig3.png)
+<img src="Results/fig3.png" alt="Figure 3" style="zoom:33%;" />
 
 Then, regarding the evolution of the loss we can observe how the test one is higher than the train one and there is not a significant sign of overfitting. From iteration 80 the test loss seems to grow a little bit so we could get a little bit of overfitting but not very significant.
 
-![Figure 4](Results/fig4.png)
+<img src="Results/fig4.png" alt="Figure 4" style="zoom:33%;" />
 
 Lastly, the classification of the test dataset gives us very good results too. As we can observe, it only misclassifies 3 datapoints. We reach an accuracy of **(88%)**, which is quite high. 
 
-![Figure 4](Results/fig5.png)
+<img src="Results/fig5.png" alt="Figure 4" style="zoom:33%;" />
 
 
 ## Exercise 2
@@ -78,31 +78,51 @@ Once we have implemented the MLP and tested that it works as expected, we can st
 
 The following image shows the evolution of the loss function with respect to the number of iterations for the testing dataset.
 
-<img src="Results/fig9.png" alt="fig9" style="zoom:35%;" />
+<img src="Results/fig9.png" alt="fig9" style="zoom:33%;" />
 
 The more hidden neurons the network has, the less number of iterations are required for the error to decrease. That is, the less number of iterations are required for the network to be able to properly classify the testing dataset. By observing the graph, we can see a pattern regardless of the number of neurons the network has: after reaching the minimum loss value, in all cases overfitting starts to be visible from a graphical point of view. However, we need to be aware of the very small range of values in which the error oscilates as iterations increase $[\approx0.146, \approx 0.149]$. Therefore, we can consider this overfitting to be negligible.
 
-On the first place, our attention has been caught by the network with $7$ hidden nodes, as it is the one that achieves the smallest error value with a small number of parameters due to the reduced number of neurons that it has. The higher the number of neurons the network has, the less iterations are required to reach to the point of minumum error. Nevertheless, what we believe that is the most important, is the amount of time that it takes for the neuron to reach that point. Therefore, to have a better understanding of how the different networks perform, we have decided to measure the time that it takes for them to reach the minimum error. The following table shows the results:
+In a first observation, it seems like adding more neurons is better, as a lower error value is reached with fewer iterations. However, what is important is not the number of iterations that are needed to reach the point of minimum error, but the training time required to reach that point.
 
-| Number of hidden neurons | Minimum Error value | Time (ms) |
-| ------------------------ | ------------------- | --------- |
-| 3                        | 0.151               | 0.23      |
-| **7**                    | **0.146**           | **0.25**  |
-| 12                       | 0.149               | 0.24      |
-| 15                       | 0.149               | 0.75      |
-| 18                       | 0.147               | 0.25      |
-| 20                       | 0.148               | 0.27      |
-| 50                       | 0.147               | 0.29      |
-| **100**                  | **0.148**           | **0.30**  |
+Therefore, to obtain a better understanding of how our model works with the different networks, we have decided to compute the time that it takes to the network to achieve the minimum error. The following table shows the results.
 
-> These time results have been achieved with a 2015 iMac, 4 cores 4 GHz Intel Core i7 CPU and 32 GB 1867 MHz DDR3 memory. Resluts may vary from one machine to another.
+| Number of hidden neurons | Minimum Error value | Time (ms)           |
+| ------------------------ | ------------------- | ------------------- |
+| 3                        | 0.154               | 0.24                |
+| 7                        | 0.152               | 0.27 |
+| 12                       | 0.152               | 0.25  |
+| 15                       | 0.148               | 0.30  |
+| 18                       | 0.147               | 0.31 |
+| 20                       | 0.147               | 0.26 |
+| 50                       | 0.147               | 0.32    |
+| 100                      | 0.145               | 0.36 |
 
-As we can observe, time varies very little between the different networks.
+> **NOTE**: These time results have been achieved with a 2015 iMac, 4 cores 4 GHz Intel Core i7 CPU and 32 GB 1867 MHz DDR3 memory. Resluts may vary from one machine to another.
 
-Having said all of this, we have decided that the best network for this particular problem is the one with just 7 hidden neurons. It is the one that achieves the smallest error and it does so in the same time (approximately) as larger networks reach their own minumum error value (even though it takes more iterations).
+On the one hand, if we look at the minimum error value, we can reaffirm what we have said so far. On the other hand, by observing the time column we see that there is a positive correlation between time and the number of hidden neurons. This comes as no big surprise, since the higher the number of neurons, the more parameters the network needs to learn. However, the time difference between higher order and lower order networks is relatively small.
 
-### Trying with different learning rate values
+Having said all of this, we have decided that the best network for this particular problem is the one with 100 hidden neurons. This is because it is the one that achieves the smallest error with a reasonable amount of time. If for some reason, time happened to be a problem, we could have chosen a lower order network, with 15 or 18 neurons, and still obtain a very similar error value.
+
+### Trying with different learning rate values $\alpha$
+
+After deciding to use the network with 100 hidden neurons, we have compared how the loss function evolves with different values for the learning rate $\alpha$. The following image shows the results that we have obtained.
 
 
 
-<img src="Results/fig10.png" alt="fig10" style="zoom:35%;" />
+<img src="Results/fig10.png" alt="fig10" style="zoom:33%;" />
+
+As expected, the higher the learning rate is, the less iterations are required for the network to reach the point of minimum error. By observing the image, we can discard $\alpha = 0.0005$ and $\alpha = 0.001$ to be valid learing rates if we limit the training phase to $100$ iterations.
+
+To be able to decide which learning rate better suits for the binary classification problem that we are dealing with, we have repeated the same experiment that we have previously done. We have computed the time that it takes to our network to reach the point of minimum error with the different learning rate values. The results that we have obtained are the following:
+
+| Learning rate | Minimum Error value | Time (ms)              |
+| ------------- | ------------------- | ---------------------- |
+| 0.0005        | 0.167 | 0.30  |
+| 0.001         | 0.152 | 0.30 |
+| 0.01          | 0.147 | 0.29  |
+| 0.025         | 0.147 | 0.29 |
+| 0.05          | 0.147 | 0.30  |
+
+> **NOTE**: These time results have been achieved with a 2015 iMac, 4 cores 4 GHz Intel Core i7 CPU and 32 GB 1867 MHz DDR3 memory. Resluts may vary from one machine to another.
+
+The difference between using $\alpha = 0.01$, $\alpha = 0.025$ or $\alpha = 0.05$ is neglibile. Therefore, given that with $\alpha = 0.05$ there are less iterations required to achieve the minimum error, we have decided that it is the value that we would use for this problem.
