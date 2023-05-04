@@ -1,4 +1,11 @@
-torch
+pip
+setuptools
+wheel
 numpy
 pandas
 matplotlib
+ipympl
+opencv-python
+torch
+ipykernel
+sklearn

@@ -31,9 +31,17 @@ Or using the `Select Kernel` option for Jupyter Notebooks:
 
 4. It is recommended to install some basic DL packages as well:
 
+The recommended approach is to use the `requirements.txt` file to install all dependencies:
+
+```bash
+python -m pip install --upgrade -r requirements.txt
+```
+
+You can also install them manually as follows:
+
 ```bash
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install numpy google pandas matplotlib ipympl opencv-python torch ipykernel
+python -m pip install numpy pandas matplotlib ipympl opencv-python torch ipykernel sklearn
 ```
 
 ## Installing tensorflow

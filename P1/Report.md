@@ -6,6 +6,12 @@ Group 8
 
 Andreu Garcies (240618), Alejandro Fernández (242349), Marc Aguilar (242192)
 
+> **Environment note**: We have worked in a local installation of `Python 3.10.9`. The libraries used (and their version) can be found in the `requirements.txt` file. You can install these dependencies with the following command:
+>
+> ```bash
+> python -m pip install --upgrade -r requirements.txt
+> ```
+
 ## Exercise 1
 
 First of all, after loading both train and test data we normalized it. Our first approach was doing it by dividing by the maximum value, but we were not getting correct results. Therefore, we decided to do it by substracting the mean and dividing by the standard deviation. 
