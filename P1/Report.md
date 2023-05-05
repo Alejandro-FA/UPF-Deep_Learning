@@ -86,7 +86,7 @@ The following image shows the evolution of the loss function with respect to the
 
 <img src="Results/fig9.png" alt="fig9" style="zoom:33%;" />
 
-The more hidden neurons the network has, the less number of iterations are required for the error to decrease. That is, the less number of iterations are required for the network to be able to properly classify the testing dataset. By observing the graph, we can see a pattern regardless of the number of neurons the network has: after reaching the minimum loss value, in all cases overfitting starts to be visible from a graphical point of view. However, we need to be aware of the very small range of values in which the error oscilates as iterations increase $[\approx0.146, \approx 0.149]$. Therefore, we can consider this overfitting to be negligible.
+The more hidden neurons the network has, the less number of iterations are required for the error to decrease. That is, the less number of iterations are required for the network to be able to properly classify the testing dataset. By observing the graph, we can see a pattern regardless of the number of neurons the network has: after reaching the minimum loss value, in all cases overfitting starts to be visible from a graphical point of view. However, we need to be aware of the very small range of values in which the error oscilates as iterations increase $[\approx0.45, \approx 0.48]$. Therefore, we can consider this overfitting to be negligible.
 
 In a first observation, it seems like adding more neurons is better, as a lower error value is reached with fewer iterations. However, what is important is not the number of iterations that are needed to reach the point of minimum error, but the training time required to reach that point.
 
@@ -94,14 +94,14 @@ Therefore, to obtain a better understanding of how our model works with the diff
 
 | Number of hidden neurons | Minimum Error value | Time (ms)           |
 | ------------------------ | ------------------- | ------------------- |
-| 3                        | 0.154               | 0.24                |
-| 7                        | 0.152               | 0.27 |
-| 12                       | 0.152               | 0.25  |
-| 15                       | 0.148               | 0.30  |
-| 18                       | 0.147               | 0.31 |
-| 20                       | 0.147               | 0.26 |
-| 50                       | 0.147               | 0.32    |
-| 100                      | 0.145               | 0.36 |
+| 3                        | 0.457 | 0.22602081298828125 |
+| 7                        | 0.460 | 0.22721290588378906 |
+| 12                       | 0.457 | 0.2868175506591797 |
+| 15                       | 0.447 | 0.3139972686767578 |
+| 18                       | 0.446 | 0.22101402282714844 |
+| 20                       | 0.442 | 0.23412704467773438 |
+| 50                       | 0.442 | 0.2491474151611328 |
+| 100                      | 0.438 | 0.31495094299316406 |
 
 > **NOTE**: These time results have been achieved with a 2015 iMac, 4 cores 4 GHz Intel Core i7 CPU and 32 GB 1867 MHz DDR3 memory. Resluts may vary from one machine to another.
 
@@ -123,11 +123,11 @@ To be able to decide which learning rate better suits for the binary classificat
 
 | Learning rate | Minimum Error value | Time (ms)              |
 | ------------- | ------------------- | ---------------------- |
-| 0.0005        | 0.167 | 0.30  |
-| 0.001         | 0.152 | 0.30 |
-| 0.01          | 0.147 | 0.29  |
-| 0.025         | 0.147 | 0.29 |
-| 0.05          | 0.147 | 0.30  |
+| 0.0005        | 0.460 | 0.273 |
+| 0.001         | 0.441 | 0.267 |
+| 0.01          | 0.440 | 0.264 |
+| 0.025         | 0.441 | 0.264 |
+| 0.05          | 0.441 | 0.353 |
 
 > **NOTE**: These time results have been achieved with a 2015 iMac, 4 cores 4 GHz Intel Core i7 CPU and 32 GB 1867 MHz DDR3 memory. Resluts may vary from one machine to another.
 
