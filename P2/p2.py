@@ -43,18 +43,18 @@ Define the RNN Model
 """
 # Define module encapsulating a Sequence Classifier using RNN or LSTMs and setting different architecture hyper-parameters
 class SequenceClassifier(nn.Module):
-    def __init__(self, input_size: int = 1, hidden_size: int = 5, num_layers=1, use_lstm: bool = False):
+    def __init__(self, input_size: int = 1, hidden_size: int = 5, num_layers=1, use_lstm: bool = False, bias: bool = False):
         # Define RNN or LSTM architecture
         super().__init__()
         self.use_lstm = use_lstm
         
         if use_lstm:
-            self.rnn = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True)
+            self.rnn = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True, bias=bias)
         else:
-            self.rnn = nn.RNN(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True)
+            self.rnn = nn.RNN(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True, bias=bias)
         
-        self.activation = nn.Softmax() # FIXME: Change if necessary
-        self.last_linear = nn.Linear(hidden_size, 1)
+        self.activation = nn.Softmax(dim=1) # FIXME: Change if necessary
+        self.last_linear = nn.Linear(hidden_size, 6) # FIXME: Do not hard code 5
 
     def forward(self, X):
         _, last_states = self.rnn(X)
@@ -74,9 +74,6 @@ def train_sequence_classifier(X_train, Y_train, seq_classifier, optimizer, loss_
     for iter in range(epochs):
         optimizer.zero_grad()
         output = seq_classifier(X_train)
-        if iter == 2:
-            print("output:", output)
-            print("Loss input shape: ", output.shape)
         loss = loss_func(output, Y_train)
         loss_its.append(loss.item())
         loss.backward()
@@ -90,8 +87,12 @@ def train_sequence_classifier(X_train, Y_train, seq_classifier, optimizer, loss_
 # Compute accuracy accross testing dataset
 def test_sequence_classifier(X_test, Y_test, seq_classifier, prob_threshold=0.5):
     output = seq_classifier(X_test)
-    accuracy = (((output > prob_threshold) == (Y_test > prob_threshold)) * 1.0).mean()
+    classification = torch.argmax(output, dim=1)
+    print(classification)
+    print(Y_test)
+    accuracy = torch.sum(classification == Y_test) / output.shape[0]
     print(f"Test Accuracy: {accuracy.item()}")
+    
     return accuracy.item()
 
 
@@ -106,10 +107,10 @@ torch.manual_seed(seed_value)
 # Y_train_pt = torch.from_numpy(Y_train).float().unsqueeze(1).cuda()
 # X_test_pt = torch.from_numpy(X_test).float().unsqueeze(2).cuda()
 # Y_test_pt = torch.from_numpy(Y_test).float().unsqueeze(1).cuda()
-X_train_pt = torch.from_numpy(X_train).float().unsqueeze(2)
-Y_train_pt = torch.from_numpy(Y_train).float().unsqueeze(1)
-X_test_pt = torch.from_numpy(X_test).float().unsqueeze(2)
-Y_test_pt = torch.from_numpy(Y_test).float().unsqueeze(1)
+X_train_pt = torch.from_numpy(X_train).float().unsqueeze(2).cuda()
+Y_train_pt = torch.from_numpy(Y_train).long().cuda() # .unsqueeze(1)
+X_test_pt = torch.from_numpy(X_test).float().unsqueeze(2).cuda()
+Y_test_pt = torch.from_numpy(Y_test).long().cuda() # .unsqueeze(1)
 
 # Define Cross Entropy Loss
 loss_func = nn.CrossEntropyLoss()
@@ -119,9 +120,10 @@ print(Y_train_pt.shape) # (210, 1)
 
 # Hyperparameters
 input_size = 1  # number of features of each point
-hidden_sizes_list = [5]
-num_layers_list = [1]
-use_lstm_list = [False]
+hidden_sizes_list = [5, 5, 20, 20, 100, 100]
+num_layers_list = [3, 10] * 3
+use_lstm_list = [True] * 6
+bias = True
 
 # Train the models
 losses_models = {}
@@ -131,8 +133,8 @@ for hidden_size, num_layers, use_lstm in zip(hidden_sizes_list, num_layers_list,
     model_id = f"H{hidden_size}_NL{num_layers}_LSTM{int(use_lstm)}"
     print(f"Training: {model_id}")
     
-    seq_classifier = SequenceClassifier(input_size=input_size, use_lstm=use_lstm, num_layers=num_layers, hidden_size=hidden_size)
-    # seq_classifier.cuda()
+    seq_classifier = SequenceClassifier(input_size=input_size, use_lstm=use_lstm, num_layers=num_layers, hidden_size=hidden_size, bias=bias)
+    seq_classifier.cuda() # FIXME: change me if necessary
     
     optimizer = torch.optim.Adam(seq_classifier.parameters(), lr=1e-3)
     
@@ -142,13 +144,16 @@ for hidden_size, num_layers, use_lstm in zip(hidden_sizes_list, num_layers_list,
 
 # Visualize loss function evolution
 fig2 = plt.figure(2)
-plt.title('Loss evolution', fontsize=14, fontweight="bold")
-plt.plot(losses_models["H5_NL1_LSTM0"], color="black", label="Train loss")
-plt.xlabel('Iterations (x100)')
+for model in losses_models.keys():
+    model_loss = losses_models[model]
+    plt.plot(model_loss, label=f"Train loss {model} {test_accuracy_models[model]}")
+
+plt.title(f'Loss evolution', fontsize=14, fontweight="bold")
+plt.xlabel('Iterations')
 plt.ylabel('Loss Val')
-plt.legend()
 plt.ylim(0, None)
-plt.grid()
+plt.grid() 
+plt.legend()
 
 """
 Experiment with different models by changing different hyper-parameters
