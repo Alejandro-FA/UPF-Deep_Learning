@@ -103,14 +103,14 @@ Train a RNN or LSTM to solve the multi-class sequence classification problem.
 """
 torch.manual_seed(seed_value)
 # Dataset to PyTorch format
-# X_train_pt = torch.from_numpy(X_train).float().unsqueeze(2).cuda()
-# Y_train_pt = torch.from_numpy(Y_train).float().unsqueeze(1).cuda()
-# X_test_pt = torch.from_numpy(X_test).float().unsqueeze(2).cuda()
-# Y_test_pt = torch.from_numpy(Y_test).float().unsqueeze(1).cuda()
 X_train_pt = torch.from_numpy(X_train).float().unsqueeze(2).cuda()
 Y_train_pt = torch.from_numpy(Y_train).long().cuda() # .unsqueeze(1)
 X_test_pt = torch.from_numpy(X_test).float().unsqueeze(2).cuda()
 Y_test_pt = torch.from_numpy(Y_test).long().cuda() # .unsqueeze(1)
+# X_train_pt = torch.from_numpy(X_train).float().unsqueeze(2)
+# Y_train_pt = torch.from_numpy(Y_train).long() # .unsqueeze(1)
+# X_test_pt = torch.from_numpy(X_test).float().unsqueeze(2)
+# Y_test_pt = torch.from_numpy(Y_test).long() # .unsqueeze(1)
 
 # Define Cross Entropy Loss
 loss_func = nn.CrossEntropyLoss()
