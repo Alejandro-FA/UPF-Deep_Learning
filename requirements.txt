@@ -8,4 +8,4 @@ ipympl
 opencv-python
 torch
 ipykernel
-sklearn
+scikit-learn
