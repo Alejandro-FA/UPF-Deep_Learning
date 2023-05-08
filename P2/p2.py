@@ -103,6 +103,7 @@ def allocate(item, use_cuda=False):
     else:
         return item.cpu()
 
+
 """
 Experiment with different models by changing different hyper-parameters
 (e.g, num_layers, hidden_size, optimiziers, activation_functions for RNNs, etc..)
@@ -130,6 +131,7 @@ use_lstm_list = [True] * 6
 bias = False
 optimizer_class = torch.optim.Adam
 lr = 1e-3
+epochs = 100
 
 # Train the models
 losses_models = {}
@@ -144,7 +146,7 @@ for hidden_size, num_layers, use_lstm in zip(hidden_sizes_list, num_layers_list,
     allocate(seq_classifier, use_cuda)
     optimizer = optimizer_class(seq_classifier.parameters(), lr=lr)
     
-    losses_models[model_id] = train_sequence_classifier(X_train_pt, Y_train_pt, seq_classifier, optimizer, loss_func, seed_value, epochs=100)
+    losses_models[model_id] = train_sequence_classifier(X_train_pt, Y_train_pt, seq_classifier, optimizer, loss_func, seed_value, epochs)
     test_accuracy_models[model_id], confusion_matrix_models[model_id] = test_sequence_classifier(X_test_pt, Y_test_pt, seq_classifier)
 
 # Visualize loss function evolution
