@@ -1,0 +1,21 @@
+With the code as it was:
+Epoch 0          Train Loss 3.302        Test Loss 3.281         Test Acc. (%)  5.9
+Epoch 50         Train Loss 2.456        Test Loss 2.586         Test Acc. (%)  23.7
+Epoch 100        Train Loss 2.094        Test Loss 2.347         Test Acc. (%)  31.5
+Epoch 150        Train Loss 1.874        Test Loss 2.215         Test Acc. (%)  35.2
+Epoch 200        Train Loss 1.705        Test Loss 2.1           Test Acc. (%)  38.9
+Epoch 250        Train Loss 1.587        Test Loss 2.039         Test Acc. (%)  41.1
+Epoch 300        Train Loss 1.502        Test Loss 2.005         Test Acc. (%)  43.2
+Epoch 350        Train Loss 1.439        Test Loss 1.999         Test Acc. (%)  44.3
+Epoch 400        Train Loss 1.395        Test Loss 2.008         Test Acc. (%)  45.0
+Epoch 450        Train Loss 1.359        Test Loss 2.023         Test Acc. (%)  45.6
+Epoch 500        Train Loss 1.329        Test Loss 2.035         Test Acc. (%)  46.2
+Epoch 550        Train Loss 1.3          Test Loss 2.053         Test Acc. (%)  47.0
+Epoch 600        Train Loss 1.275        Test Loss 2.067         Test Acc. (%)  47.5
+Epoch 650        Train Loss 1.252        Test Loss 2.082         Test Acc. (%)  47.9
+Epoch 700        Train Loss 1.23         Test Loss 2.097         Test Acc. (%)  48.2
+Epoch 750        Train Loss 1.211        Test Loss 2.114         Test Acc. (%)  48.3
+Epoch 800        Train Loss 1.194        Test Loss 2.135         Test Acc. (%)  48.7
+Epoch 850        Train Loss 1.18         Test Loss 2.156         Test Acc. (%)  49.0
+Epoch 900        Train Loss 1.167        Test Loss 2.18          Test Acc. (%)  49.2
+Epoch 950        Train Loss 1.155        Test Loss 2.204         Test Acc. (%)  49.4
