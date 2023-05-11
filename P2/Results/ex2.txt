@@ -43,3 +43,26 @@ Epoch 850        Train Loss 0.824        Test Loss 0.807         Test Acc. (%)  
 Epoch 900        Train Loss 0.735        Test Loss 0.716         Test Acc. (%)  81.8
 Epoch 950        Train Loss 0.672        Test Loss 0.652         Test Acc. (%)  83.8
 Final Epoch      Train Loss 0.629        Test Loss 0.608         Test Acc. (%)  85.0
+
+Using the dictionary as dataset:
+Epoch 0          Train Loss 3.28         Test Loss 3.262         Test Acc. (%)  0.6
+Epoch 50         Train Loss 2.567        Test Loss 2.61          Test Acc. (%)  22.9
+Epoch 100        Train Loss 2.186        Test Loss 2.244         Test Acc. (%)  31.5
+Epoch 150        Train Loss 1.951        Test Loss 2.03          Test Acc. (%)  35.3
+Epoch 200        Train Loss 1.817        Test Loss 1.915         Test Acc. (%)  37.6
+Epoch 250        Train Loss 1.729        Test Loss 1.832         Test Acc. (%)  39.6
+Epoch 300        Train Loss 1.66         Test Loss 1.767         Test Acc. (%)  42.0
+Epoch 350        Train Loss 1.609        Test Loss 1.719         Test Acc. (%)  42.8
+Epoch 400        Train Loss 1.569        Test Loss 1.683         Test Acc. (%)  43.9
+Epoch 450        Train Loss 1.537        Test Loss 1.653         Test Acc. (%)  44.6
+Epoch 500        Train Loss 1.508        Test Loss 1.622         Test Acc. (%)  46.2
+Epoch 550        Train Loss 1.482        Test Loss 1.594         Test Acc. (%)  47.2
+Epoch 600        Train Loss 1.444        Test Loss 1.561         Test Acc. (%)  48.4
+Epoch 650        Train Loss 1.22         Test Loss 1.311         Test Acc. (%)  60.6
+Epoch 700        Train Loss 0.995        Test Loss 1.072         Test Acc. (%)  69.2
+Epoch 750        Train Loss 0.868        Test Loss 0.933         Test Acc. (%)  74.3
+Epoch 800        Train Loss 0.788        Test Loss 0.845         Test Acc. (%)  77.8
+Epoch 850        Train Loss 0.728        Test Loss 0.778         Test Acc. (%)  80.3
+Epoch 900        Train Loss 0.683        Test Loss 0.724         Test Acc. (%)  81.7
+Epoch 950        Train Loss 0.651        Test Loss 0.69          Test Acc. (%)  82.4
+Final Epoch      Train Loss 0.623        Test Loss 0.654         Test Acc. (%)  83.3

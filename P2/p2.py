@@ -188,7 +188,13 @@ with open(input_path + "testing_corrupted.pkl", "rb") as pkl_file:
     test = pickle.load(pkl_file)
 vocabulary = [char for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"]  # Predefined vocabulary
 
+with open(input_path + "our_training.pkl", "rb") as pkl_file:
+    our_train = pickle.load(pkl_file)
 
+vocabulary = [char for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"]  # Predefined vocabulary
+
+
+print(f'Our training dataset has {len(our_train)} sentences')
 print('Type of train:', type(train), 'Length of train:', len(train)) # FIXME: Remove this
 
 # Corrupted Testing Sequence Visualization
@@ -328,13 +334,22 @@ def corrupt_data(input_list: List[str], corruption_ratio: float = 0.125):
     return output_list
 
 
-corrupted_train_cypher = [] + decoded_train_cypher
+corrupted_train_cypher = []
+our_train_cypher = [encrypt_message(sentence, keyword, vocabulary) for sentence in our_train]
 ratios = [0.05, 0.125, 0.25]
-corrupted_train_plaintext = [pair[1] for pair in train] * len(ratios)  # TODO: change for the correct data
-for ratio in ratios:
-    corrupted_train_cypher += corrupt_data(decoded_train_cypher, corruption_ratio=ratio)
+splitted = np.array_split(our_train_cypher, len(ratios))
+for idx, ratio in enumerate(ratios):
+    corrupted_train_cypher += corrupt_data(splitted[idx], corruption_ratio=ratio)
 
-corrupted_train = [[sentence_to_num(sentence, vocabulary), corrupted_train_plaintext[idx]] for idx, sentence in enumerate(corrupted_train_cypher)]
+corrupted_train = [[sentence_to_num(cypher, vocabulary), sentence_to_num(plaintext, vocabulary)] for cypher, plaintext in zip(corrupted_train_cypher, our_train)]
+
+# corrupted_train_cypher = [] + decoded_train_cypher
+# ratios = [0.05, 0.125, 0.25]
+# corrupted_train_plaintext = [pair[1] for pair in train] * len(ratios)  # TODO: change for the correct data
+# for ratio in ratios:
+#     corrupted_train_cypher += corrupt_data(decoded_train_cypher, corruption_ratio=ratio)
+
+# corrupted_train = [[sentence_to_num(sentence, vocabulary), corrupted_train_plaintext[idx]] for idx, sentence in enumerate(corrupted_train_cypher)]
 
 class DecrypterNetwork(nn.Module):
     def __init__(
@@ -420,6 +435,7 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
         test_loss_hist.append(test_loss.item())
         acc_hist.append(accuracy.item())
 
+        print(f"Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}") # TODO : Remove
         if epoch % 50 == 0:
             print(f"Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}")
     
@@ -439,7 +455,7 @@ test_decrypted = torch.concat([test_sample[1].unsqueeze(0) for test_sample in te
 letters_embedding_size = 4
 hidden_size = 16
 num_letters = len(vocabulary)
-num_layers = 1
+num_layers = 2
 use_lstm = True
 
 
@@ -454,7 +470,7 @@ decrypter_network = DecrypterNetwork(
 # Define loss, optimizer and run training/evaluation loop
 num_epochs = 1000
 CE_loss = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(decrypter_network.parameters(), lr=1e-2)
+optimizer = torch.optim.Adam(decrypter_network.parameters(), lr=0.05)
 
 decrypter_network, loss_hist, test_loss_hist, acc_hist = train_test(decrypter_network, num_epochs, CE_loss, optimizer,
                                                                     train_encrypted, train_decrypted, test_encrypted, test_decrypted,
