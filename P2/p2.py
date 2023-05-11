@@ -117,7 +117,7 @@ data = np.load(input_path + 'P2_E1.npz')
 
 # print('\nX_train and Y_train shape after being moved to torch:')
 # print(X_train_pt.shape) # (210, 40, 1)
-# print(Y_train_pt.shape) # (210, 1)
+# print(Y_train_pt.shape) # (210,)
 # print('-------------------------------')
 
 # # Define Cross Entropy Loss
