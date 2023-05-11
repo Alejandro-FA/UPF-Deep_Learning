@@ -153,20 +153,21 @@ data = np.load(input_path + 'P2_E1.npz')
 # fig2 = plt.figure(2)
 # for model, loss in losses_models.items():
 #     accuracy = np.round(test_accuracy_models[model] * 100, decimals=1)
-#     plt.plot(loss, label=f"Train loss {model}, accuracy = {accuracy}")
+#     plt.plot(loss, label=f"Train loss {model}, Accuracy = {accuracy}%")
 
 # plt.title(f'Loss evolution', fontsize=14, fontweight="bold")
 # plt.xlabel('Iterations')
 # plt.ylabel('Loss Val')
-# plt.ylim(0, None)
+# # plt.ylim(0, None)
 # plt.grid() 
 # plt.legend()
 # if save_figure: plt.savefig(f"{output_path}fig2.png", dpi=400)
 
 # # Visualize the confusion matrices
 # for model, cm in confusion_matrix_models.items():
-#     fig = ConfusionMatrixDisplay(cm).plot()
-#     fig.ax_.set_title(model)
+#     accuracy = np.round(test_accuracy_models[model] * 100, decimals=1)
+#     fig = ConfusionMatrixDisplay(cm).plot(cmap="plasma")
+#     fig.ax_.set_title(f"{model}. Accuracy {accuracy}%", fontweight="bold")
 
 # """
 # Visualise, analyse and discuss the results in the report.
@@ -204,194 +205,235 @@ def decode_message(message, vocabulary):
 encrypted1 = decode_message(train[0][0], vocabulary)
 decrypted1 =  decode_message(train[0][1], vocabulary)
 
+def uppercase_to_num(uppercase_letter):
+    return ord(uppercase_letter) - ord("A")
+
+def num_to_uppercase(number):
+    return chr(number + ord("A"))
+
+def encrypt_message(plaintext, keyword):
+    cyphertext = ""
+    for i in range(len(plaintext)):
+        p = uppercase_to_num(plaintext[i])
+        k = uppercase_to_num(keyword[i])
+        c = (p + k) % 26
+        cyphertext += num_to_uppercase(c)
+
+    return cyphertext
+
+
 def find_vigenere_keyword(plaintext, ciphertext):
     plaintext = plaintext.upper()
     ciphertext = ciphertext.upper()
 
     keyword = ""
     for i in range(len(plaintext)):
-        p = ord(plaintext[i]) - 65  # Convert plaintext character to a numeric value (0-25)
-        c = ord(ciphertext[i]) - 65  # Convert ciphertext character to a numeric value (0-25)
+        p = uppercase_to_num(plaintext[i])  # Convert plaintext character to a numeric value (0-25)
+        c = uppercase_to_num(ciphertext[i])  # Convert ciphertext character to a numeric value (0-25)
         k = (c - p) % 26  # Calculate the shift between the plaintext and ciphertext characters
-        keyword += chr(k + 65)  # Convert the shift value back to a character and append it to the keyword
+        keyword += num_to_uppercase(k)  # Convert the shift value back to a character and append it to the keyword
 
 
     return keyword
 
-keyword = find_vigenere_keyword(encrypted1, decrypted1)
-print(f"The keyword used is: {keyword}")
+keyword = find_vigenere_keyword(decrypted1, encrypted1)
 
+print(f"The keyword used is: {keyword}\n")
+
+# We can indeed verify that the keyword that we have found is the expected one by encrypting some of the plaintexts with our keyword and comparing with the expected output that the dataset contains.
+test_keyword = 3
+for i in range(test_keyword):
+    print("==================================================")
+    print(f"Plaintext: {decode_message(train[i][1], vocabulary)}")
+    our_encrypted = encrypt_message(decode_message(train[i][1], vocabulary), keyword)
+    print(f"Encrypted plaintext: {our_encrypted}")
+    print(f"Our encryption == encrypted message from dataset {our_encrypted == decode_message(train[i][0], vocabulary)}")
+    print("==================================================\n")
+
+### 2. Analyze the data distribution and define the new alphabet. Do plots (histogram)
 ### 2. Analyze the data distribution and define the new alphabet. Do plots (histogram)
 train_cypher = [pair[0] for pair in train]
 train_plaintext = [pair[1] for pair in train]
+
 train_cypher = torch.cat(train_cypher)
+train_cypher = [decode_message([i.item()], vocabulary) for i in train_cypher]
+train_cypher = sorted(train_cypher)
+
 train_plaintext = torch.cat(train_plaintext)
+train_plaintext = [decode_message([i.item()], vocabulary) for i in train_plaintext]
+train_plaintext = sorted(train_plaintext)
 
 test_cypher = [pair[0] for pair in test]
-test_plaintext = [pair[1] for pair in test]
 test_cypher = torch.cat(test_cypher)
+test_cypher = [decode_message([i.item()], vocabulary) for i in test_cypher]
+test_cypher = sorted(test_cypher)
+
+
+test_plaintext = [pair[1] for pair in test]
 test_plaintext = torch.cat(test_plaintext)
+test_plaintext = [decode_message([i.item()], vocabulary) for i in test_plaintext]
+test_plaintext = sorted(test_plaintext)
 
-bins = 27
+bins = len(vocabulary)
 
-fig3, axs = plt.subplots(2,2)
-fig3.suptitle('Data Distribution')
-axs[0, 0].hist(train_plaintext, bins, color = "blue")
+fig3, axs = plt.subplots(2,2, figsize=(10, 10))
+fig3.suptitle("Data Distribution", fontsize="16", fontweight="bold")
+axs[0, 0].hist(train_plaintext, bins, color = "#55b8ed", edgecolor="black")
 axs[0, 0].set_title("Train plaintexts")
-axs[0, 1].hist(train_cypher, bins, color = "orange")
+axs[0, 1].hist(train_cypher, bins, color = "#55b8ed", edgecolor="black")
 axs[0, 1].set_title("Train cyphertexts")
-axs[1, 0].hist(test_plaintext, bins, color = "blue")
+axs[1, 0].hist(test_plaintext, bins, color = "orange", edgecolor="black")
 axs[1, 0].set_title("Test plaintexts")
-axs[1, 1].hist(test_cypher, bins, color = "orange")
+axs[1, 1].hist(test_cypher, bins, color = "orange", edgecolor="black")
 axs[1, 1].set_title("Test cyphertexts")
 
-
+if save_figure: plt.savefig(fig3, dpi=300)
 
 ### 3. Design/Implement an strategy to train the model so that it can be robust to missing characters in the testing samples ( to be discussed in class )
 
-class DecrypterNetwork(nn.Module):
-  def __init__(self,
-               hidden_size : int = 8, 
-               num_layers = 1,
-               num_letters = 26,
-               letters_embedding_size : int = 8,
-               use_lstm : bool = False):
-    # Define RNN or LSTM architecture
-    super().__init__()
-    self.hidden_size = hidden_size
-    self.num_letters = num_letters
-    self.letters_embedder = torch.nn.Embedding(num_letters, letters_embedding_size)
-    self.use_lstm = use_lstm
-    self.softmax = nn.Softmax(dim=1)
-    if(use_lstm):
-      self.rnn =  nn.LSTM(input_size = letters_embedding_size, hidden_size = hidden_size, 
-                          num_layers=num_layers, batch_first = True)
-    else:
-      self.rnn =  nn.RNN(input_size = input_size, hidden_size = hidden_size, 
-                         num_layers=num_layers, batch_first = True)
-    self.last_linear = nn.Linear(hidden_size,num_letters)
+# class DecrypterNetwork(nn.Module):
+#   def __init__(self,
+#                hidden_size : int = 8, 
+#                num_layers = 1,
+#                num_letters = 26,
+#                letters_embedding_size : int = 8,
+#                use_lstm : bool = False):
+#     # Define RNN or LSTM architecture
+#     super().__init__()
+#     self.hidden_size = hidden_size
+#     self.num_letters = num_letters
+#     self.letters_embedder = torch.nn.Embedding(num_letters, letters_embedding_size)
+#     self.use_lstm = use_lstm
+#     self.softmax = nn.Softmax(dim=1)
+#     if(use_lstm):
+#       self.rnn =  nn.LSTM(input_size = letters_embedding_size, hidden_size = hidden_size, 
+#                           num_layers=num_layers, batch_first = True)
+#     else:
+#       self.rnn =  nn.RNN(input_size = input_size, hidden_size = hidden_size, 
+#                          num_layers=num_layers, batch_first = True)
+#     self.last_linear = nn.Linear(hidden_size,num_letters)
 
-  def forward(self, X):
-    N = X.shape[0]
-    L = X.shape[1]
-    embedded_letters = self.letters_embedder(X)
-    # Get hidden states for all letters in the sequence
-    hidden_states,_ = self.rnn(embedded_letters)
-    # In case of multiple input sequneces flat (N,L,hidden_size) to (N*L,hidden_size) for linear layer
-    hidden_states_concat = hidden_states.reshape(-1,self.hidden_size) 
-    # Get letters probability using the hidden states for each position in the sequence
-    letters_loggits = self.last_linear(hidden_states_concat)
-    #Use soft-max over logits and reshape to format (N,L,num_letteres)
-    letters_probs = self.softmax(letters_loggits).reshape(N,L,self.num_letters)
-    return letters_probs
+#   def forward(self, X):
+#     N = X.shape[0]
+#     L = X.shape[1]
+#     embedded_letters = self.letters_embedder(X)
+#     # Get hidden states for all letters in the sequence
+#     hidden_states,_ = self.rnn(embedded_letters)
+#     # In case of multiple input sequneces flat (N,L,hidden_size) to (N*L,hidden_size) for linear layer
+#     hidden_states_concat = hidden_states.reshape(-1,self.hidden_size) 
+#     # Get letters probability using the hidden states for each position in the sequence
+#     letters_loggits = self.last_linear(hidden_states_concat)
+#     #Use soft-max over logits and reshape to format (N,L,num_letteres)
+#     letters_probs = self.softmax(letters_loggits).reshape(N,L,self.num_letters)
+#     return letters_probs
 
-def train_test(model, num_epochs, loss_fn, optimizer, 
-               train_encrypted, train_decrypted, test_encrypted, test_decrypted,
-               vocabulary, use_cuda = False):
-    if(use_cuda):
-      model = model.cuda()
-      train_encrypted = train_encrypted.cuda()
-      train_decrypted = train_decrypted.cuda()
-      test_encrypted = test_encrypted.cuda()
-      test_decrypted = test_decrypted.cuda()
-    else:
-      model = model
-      train_encrypted = train_encrypted.cpu()
-      train_decrypted = train_decrypted.cpu()
-      test_encrypted = test_encrypted.cpu()
-      test_decrypted = test_decrypted.cpu()
+# def train_test(model, num_epochs, loss_fn, optimizer, 
+#                train_encrypted, train_decrypted, test_encrypted, test_decrypted,
+#                vocabulary, use_cuda = False):
+#     if(use_cuda):
+#       model = model.cuda()
+#       train_encrypted = train_encrypted.cuda()
+#       train_decrypted = train_decrypted.cuda()
+#       test_encrypted = test_encrypted.cuda()
+#       test_decrypted = test_decrypted.cuda()
+#     else:
+#       model = model
+#       train_encrypted = train_encrypted.cpu()
+#       train_decrypted = train_decrypted.cpu()
+#       test_encrypted = test_encrypted.cpu()
+#       test_decrypted = test_decrypted.cpu()
 
-    accuracies, max_accuracy = [], 0
-    loss_hist = []
-    acc_hist = []
-    epochs_hist = []
-    test_loss_hist = []
+#     accuracies, max_accuracy = [], 0
+#     loss_hist = []
+#     acc_hist = []
+#     epochs_hist = []
+#     test_loss_hist = []
 
-    for epoch in range(num_epochs):
-        # TRAINING AND BACK-PROPAGATION
-        optimizer.zero_grad()
-        letters_probs = model(train_encrypted)
-        loss = loss_fn(letters_probs.log().permute(0,2,1), # rearrange as to (N_sequences, N_letters, N_lenght_sequences)
-                       train_decrypted)
-        loss.backward() # Backpropagate
-        optimizer.step() # Update weights
-        loss_hist.append(loss.item())
+#     for epoch in range(num_epochs):
+#         # TRAINING AND BACK-PROPAGATION
+#         optimizer.zero_grad()
+#         letters_probs = model(train_encrypted)
+#         loss = loss_fn(letters_probs.log().permute(0,2,1), # rearrange as to (N_sequences, N_letters, N_lenght_sequences)
+#                        train_decrypted)
+#         loss.backward() # Backpropagate
+#         optimizer.step() # Update weights
+#         loss_hist.append(loss.item())
 
-        # EVALUATION
-        letters_probs = model(test_encrypted)
-        test_loss = loss_fn(letters_probs.log().permute(0,2,1), # rearrange as to (N_sequences, N_letters, N_lenght_sequences)
-                            test_decrypted)
-        _,maxprob_letters_idx = letters_probs.max(dim=2) # get letter with maximum prob
-        accuracy = ((maxprob_letters_idx==test_decrypted)*1.0).mean() # compute accuracy
-        test_loss_hist.append(test_loss.item())
-        acc_hist.append(accuracy.item())
+#         # EVALUATION
+#         letters_probs = model(test_encrypted)
+#         test_loss = loss_fn(letters_probs.log().permute(0,2,1), # rearrange as to (N_sequences, N_letters, N_lenght_sequences)
+#                             test_decrypted)
+#         _,maxprob_letters_idx = letters_probs.max(dim=2) # get letter with maximum prob
+#         accuracy = ((maxprob_letters_idx==test_decrypted)*1.0).mean() # compute accuracy
+#         test_loss_hist.append(test_loss.item())
+#         acc_hist.append(accuracy.item())
 
-        if(epoch%50==0):
-          print(f'Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}')
-    print(f'Final Epoch \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}')
-    return model,loss_hist, test_loss_hist, acc_hist
+#         if(epoch%50==0):
+#           print(f'Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}')
+#     print(f'Final Epoch \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}')
+#     return model,loss_hist, test_loss_hist, acc_hist
   
 
-# Converting training and testing datasets into PyTorch Tensor (N_seqs, lenght_seqs)
-train_encrypted = torch.concat([train_sample[0].unsqueeze(0) for train_sample in train],dim=0)
-train_decrypted = torch.concat([train_sample[1].unsqueeze(0) for train_sample in train],dim=0)
-test_encrypted = torch.concat([test_sample[0].unsqueeze(0) for test_sample in test_clean],dim=0)
-test_decrypted = torch.concat([test_sample[1].unsqueeze(0) for test_sample in test_clean],dim=0)
+# # Converting training and testing datasets into PyTorch Tensor (N_seqs, lenght_seqs)
+# train_encrypted = torch.concat([train_sample[0].unsqueeze(0) for train_sample in train],dim=0)
+# train_decrypted = torch.concat([train_sample[1].unsqueeze(0) for train_sample in train],dim=0)
+# test_encrypted = torch.concat([test_sample[0].unsqueeze(0) for test_sample in test_clean],dim=0)
+# test_decrypted = torch.concat([test_sample[1].unsqueeze(0) for test_sample in test_clean],dim=0)
 
-# Initialize  Decrypter Network 
-letters_embedding_size = 4
-hidden_size = 16
-num_letters = len(vocabulary)
-num_layers = 1
-use_lstm = True
+# # Initialize  Decrypter Network 
+# letters_embedding_size = 4
+# hidden_size = 16
+# num_letters = len(vocabulary)
+# num_layers = 1
+# use_lstm = True
 
 
-decrypter_network = DecrypterNetwork(letters_embedding_size=letters_embedding_size,
-                                    num_layers=num_layers,
-                                    num_letters=num_letters,
-                                    hidden_size=hidden_size,
-                                    use_lstm=use_lstm)
+# decrypter_network = DecrypterNetwork(letters_embedding_size=letters_embedding_size,
+#                                     num_layers=num_layers,
+#                                     num_letters=num_letters,
+#                                     hidden_size=hidden_size,
+#                                     use_lstm=use_lstm)
 
-# Define loss, optimizer and run training/evaluation loop
-num_epochs=1000
-CE_loss = torch.nn.CrossEntropyLoss() 
-optimizer = torch.optim.Adam(decrypter_network.parameters(), lr=1e-2)
+# # Define loss, optimizer and run training/evaluation loop
+# num_epochs=1000
+# CE_loss = torch.nn.CrossEntropyLoss() 
+# optimizer = torch.optim.Adam(decrypter_network.parameters(), lr=1e-2)
 
-decrypter_network,loss_hist, test_loss_hist, acc_hist = train_test(decrypter_network, 
-                                                 num_epochs, 
-                                                 CE_loss, 
-                                                 optimizer,
-                                                 train_encrypted, train_decrypted, test_encrypted, test_decrypted,
-                                                 vocabulary,
-                                                 use_cuda=False)
+# decrypter_network,loss_hist, test_loss_hist, acc_hist = train_test(decrypter_network, 
+#                                                  num_epochs, 
+#                                                  CE_loss, 
+#                                                  optimizer,
+#                                                  train_encrypted, train_decrypted, test_encrypted, test_decrypted,
+#                                                  vocabulary,
+#                                                  use_cuda=False)
 
-plt.plot(loss_hist, '-.r', linewidth=1.0, label='train_loss')
-plt.plot(test_loss_hist,'-b', linewidth=1.0, label='test_loss')
-plt.xlabel('train step', fontsize=14)
-plt.ylabel('loss', fontsize=14)
-plt.legend()
-plt.show()
+# plt.plot(loss_hist, '-.r', linewidth=1.0, label='train_loss')
+# plt.plot(test_loss_hist,'-b', linewidth=1.0, label='test_loss')
+# plt.xlabel('train step', fontsize=14)
+# plt.ylabel('loss', fontsize=14)
+# plt.legend()
+# plt.show()
 
-plt.plot(acc_hist, linewidth=3.0, label='test_acc')
-plt.xlabel('train step', fontsize=14)
-plt.ylabel('accuracy(%)', fontsize=14)
-plt.ylim([0, 1])
-plt.xlim([0, num_epochs])
-plt.legend()
-plt.show()
+# plt.plot(acc_hist, linewidth=3.0, label='test_acc')
+# plt.xlabel('train step', fontsize=14)
+# plt.ylabel('accuracy(%)', fontsize=14)
+# plt.ylim([0, 1])
+# plt.xlim([0, num_epochs])
+# plt.legend()
+# plt.show()
 
-decrypter_network = decrypter_network.cpu()
-for idx_sample in range(0,3):
-  # Inference over single training sequence
-  letters_probs = decrypter_network(test[idx_sample][0].unsqueeze(0))
-  # get index of letter with max probability 
-  _,maxprob_letters_idx = letters_probs.max(dim=2)
-  print('--------------------------------------')
-  print(f'Original Message encrypted: {decode_message(test[idx_sample][0],vocabulary)}')
-  print(f'Message decrypted: {decode_message(test[idx_sample][1],vocabulary)}')
-  print(f'Prediction Message decrypted: {decode_message(maxprob_letters_idx[0],vocabulary)}')
-  acc = (1.0*(maxprob_letters_idx[0]==test[idx_sample][1])).mean().item()
-  print(f'Prediction Message Accuracy : {round(acc,2)}')
+# decrypter_network = decrypter_network.cpu()
+# for idx_sample in range(0,3):
+#   # Inference over single training sequence
+#   letters_probs = decrypter_network(test[idx_sample][0].unsqueeze(0))
+#   # get index of letter with max probability 
+#   _,maxprob_letters_idx = letters_probs.max(dim=2)
+#   print('--------------------------------------')
+#   print(f'Original Message encrypted: {decode_message(test[idx_sample][0],vocabulary)}')
+#   print(f'Message decrypted: {decode_message(test[idx_sample][1],vocabulary)}')
+#   print(f'Prediction Message decrypted: {decode_message(maxprob_letters_idx[0],vocabulary)}')
+#   acc = (1.0*(maxprob_letters_idx[0]==test[idx_sample][1])).mean().item()
+#   print(f'Prediction Message Accuracy : {round(acc,2)}')
 
 ###############################################################################
 #                          matplotlib magic
