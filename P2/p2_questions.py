@@ -377,19 +377,20 @@ plt.show()
 """## Design/Implement an strategy to train the model so that it can be robust to missing characters in the testing samples"""
 
 class DecrypterNetwork(nn.Module):
-    def __init__( self, hidden_size: int = 8, num_layers=1, num_letters=26, letters_embedding_size: int = 8, use_lstm: bool = False, bidirectional_lstm = False):
+    def __init__( self, hidden_size: int = 8, num_layers=1, num_letters=26, letters_embedding_size: int = 8, use_lstm: bool = False, bidirectional_lstm=False):
         # Define RNN or LSTM architecture
         super().__init__()
         self.hidden_size = hidden_size
         self.num_letters = num_letters
         self.letters_embedder = torch.nn.Embedding(num_letters, letters_embedding_size)
         self.use_lstm = use_lstm
+        self.bidirectional = bidirectional_lstm
         self.softmax = nn.Softmax(dim=1)
         if use_lstm:
             self.rnn = nn.LSTM( input_size=letters_embedding_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True, bidirectional=bidirectional_lstm)
         else:
             self.rnn = nn.RNN( input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True)
-        self.last_linear = nn.Linear(hidden_size, num_letters)
+        self.last_linear = nn.Linear(hidden_size * 2 if bidirectional_lstm else hidden_size, num_letters)
 
     def forward(self, X):
         N = X.shape[0]
@@ -401,7 +402,7 @@ class DecrypterNetwork(nn.Module):
         hidden_states, _ = self.rnn(embedded_letters)
         
         # In case of multiple input sequneces flat (N,L,hidden_size) to (N*L,hidden_size) for linear layer
-        hidden_states_concat = hidden_states.reshape(-1, self.hidden_size)
+        hidden_states_concat = hidden_states.reshape(-1, self.hidden_size * 2 if self.bidirectional else self.hidden_size)
         
         # Get letters probability using the hidden states for each position in the sequence
         letters_loggits = self.last_linear(hidden_states_concat)
@@ -484,6 +485,18 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
         
         
         
+        
+                
+                        
+        
+        
+        
+                
+                        
+        
+        
+        
+        
                 
                         
         
@@ -496,7 +509,6 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
                 for letter_idx in sentence:
                     if maxprob_letters_idx[idx][letter_idx].item() == test_decrypted[idx][letter_idx]:
                         correct_non_corrupted += 1
-                    
             # Corrupted accuracy
             correct_corrupted = 0
             for idx, sentence in enumerate(corrupted_positions):
@@ -521,6 +533,11 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
     print(f"Final Epoch \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}")
     
     return model, loss_hist, test_loss_hist, acc_hist, corrupted_acc_hist, non_corrupted_acc_hist
+
+"""## EXPERIMENTS TRIED
+
+### Use our corrutped dataset
+"""
 
 # Converting training and testing datasets into PyTorch Tensor (N_seqs, lenght_seqs)
 print('Type of corrupted_train:', type(corrupted_train), 'Length of corrupted train:', len(corrupted_train)) # FIXME: Remove this
@@ -559,8 +576,7 @@ decrypter_network = DecrypterNetwork(
     num_layers=num_layers,
     num_letters=num_letters,
     hidden_size=hidden_size,
-    use_lstm=use_lstm,
-    bidirectional_lstm = bidirectional
+    use_lstm=use_lstm
 )
 
 # Define loss, optimizer and run training/evaluation loop
@@ -579,6 +595,8 @@ plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.title("Loss function evolution", fontsize=14, fontweight="bold")
 plt.legend()
+
+if save_figure: plt.savefig(f"{output_path}/fig4.png",dpi=300)
 plt.show()
 
 
@@ -586,7 +604,7 @@ fig5, axs = plt.subplots(1, 2, figsize=(10, 5))
 fig5.suptitle("Accuracies evolution", fontsize=16, fontweight="bold")
 axs[0].set_title("Overall accuracy", fontsize=14)
 axs[1].set_title("Corrupted vs Non-corrupted accuracy", fontsize=14)
-axs[0].plot(acc_hist, label="Test overall accuracy")
+axs[0].plot(acc_hist, label="Test overall accuracy", color="blue")
 for i in range(2):
     axs[i].set_ylabel("Accuracy")
     axs[i].set_ylim([0, 1])
@@ -600,6 +618,7 @@ axs[1].plot(corrupted_acc_hist, label="Test corrupted accuracy", color="red")
 axs[1].plot(non_corrupted_acc_hist, label="Test NON-corrupted accuracy", color="green")
 axs[1].legend(loc="upper left")
 
+if save_figure: plt.savefig(f"{output_path}/fig5.png",dpi=300)
 plt.show()
 
 decrypter_network = decrypter_network.cpu()
@@ -614,3 +633,64 @@ for idx_sample in range(0, 3):
     print(f"Prediction Message decrypted: {decode_message(maxprob_letters_idx[0],vocabulary)}")
     acc = (1.0 * (maxprob_letters_idx[0] == test[idx_sample][1])).mean().item()
     print(f"Prediction Message Accuracy : {round(acc,2)}")
+
+"""### Bidirectional LSTM"""
+
+# Initialize  Decrypter Network
+letters_embedding_size = 4
+hidden_size = 16
+num_letters = len(vocabulary)
+num_layers = 3
+use_lstm = True
+bidirectional = True
+
+decrypter_network = DecrypterNetwork(
+    letters_embedding_size=letters_embedding_size,
+    num_layers=num_layers,
+    num_letters=num_letters,
+    hidden_size=hidden_size,
+    use_lstm=use_lstm,
+    bidirectional_lstm = bidirectional
+)
+
+# Define loss, optimizer and run training/evaluation loop
+num_epochs = 1000
+CE_loss = torch.nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(decrypter_network.parameters(), lr=0.01)
+
+decrypter_network, loss_hist_bi, test_loss_hist_bi, acc_hist_bi, corrupted_acc_hist_bi, non_corrupted_acc_hist_bi = train_test(decrypter_network, num_epochs, CE_loss, optimizer,
+                                                                                                                train_encrypted, train_decrypted, test_encrypted, test_decrypted,
+                                                                                                                vocabulary, [corrupted_positions, total_corrupted], [non_corrupted_positions, total_non_corrupted], use_cuda=use_cuda)
+
+fig6 = plt.figure(6)
+plt.plot(loss_hist_bi, "-.r", linewidth=1.0, label="train_loss")
+plt.plot(test_loss_hist_bi, "-b", linewidth=1.0, label="test_loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Loss function evolution", fontsize=14, fontweight="bold")
+plt.legend()
+
+if save_figure: plt.savefig(f"{output_path}/fig6.png",dpi=300)
+plt.show()
+
+
+fig7, axs = plt.subplots(1, 2, figsize=(10, 5))
+fig7.suptitle("Accuracies evolution", fontsize=16, fontweight="bold")
+axs[0].set_title("Overall accuracy", fontsize=14)
+axs[1].set_title("Corrupted vs Non-corrupted accuracy", fontsize=14)
+axs[0].plot(acc_hist_bi, label="Test overall accuracy", color="blue")
+for i in range(2):
+    axs[i].set_ylabel("Accuracy")
+    axs[i].set_ylim([0, 1])
+
+axs[0].set_xlabel("Epoch")
+axs[0].set_xlim([0, num_epochs])
+axs[0].legend(loc="upper left")
+
+axs[1].set_xlabel("Epoch (x50)")
+axs[1].plot(corrupted_acc_hist_bi, label="Test corrupted accuracy", color="red")
+axs[1].plot(non_corrupted_acc_hist_bi, label="Test NON-corrupted accuracy", color="green")
+axs[1].legend(loc="upper left")
+
+if save_figure: plt.savefig(f"{output_path}/fig7.png",dpi=300)
+plt.show()

@@ -66,3 +66,146 @@ Epoch 850        Train Loss 0.728        Test Loss 0.778         Test Acc. (%)  
 Epoch 900        Train Loss 0.683        Test Loss 0.724         Test Acc. (%)  81.7
 Epoch 950        Train Loss 0.651        Test Loss 0.69          Test Acc. (%)  82.4
 Final Epoch      Train Loss 0.623        Test Loss 0.654         Test Acc. (%)  83.3
+
+Bidirectional LSTM:
+CORRECT CORRUPTED 763
+Epoch 0 	 Train Loss 3.308 	 Test Loss 3.25 	 Test Acc. (%)  10.0
+	Correct non corrupted: 5630
+	Accuracy non_corrupted: 10.053571428571429%
+	Correct corrupted: 763
+	Accuracy corrupted: 9.5375%
+Epoch 0 	 Train Loss 3.308 	 Test Loss 3.25 	 Test Acc. (%)  10.0
+CORRECT CORRUPTED 976
+Epoch 50 	 Train Loss 2.776 	 Test Loss 2.827 	 Test Acc. (%)  16.7
+	Correct non corrupted: 9724
+	Accuracy non_corrupted: 17.364285714285714%
+	Correct corrupted: 976
+	Accuracy corrupted: 12.2%
+Epoch 50 	 Train Loss 2.776 	 Test Loss 2.827 	 Test Acc. (%)  16.7
+CORRECT CORRUPTED 954
+Epoch 100 	 Train Loss 2.199 	 Test Loss 2.256 	 Test Acc. (%)  32.3
+	Correct non corrupted: 19694
+	Accuracy non_corrupted: 35.167857142857144%
+	Correct corrupted: 954
+	Accuracy corrupted: 11.924999999999999%
+Epoch 100 	 Train Loss 2.199 	 Test Loss 2.256 	 Test Acc. (%)  32.3
+CORRECT CORRUPTED 1050
+Epoch 150 	 Train Loss 1.7 	 Test Loss 1.789 	 Test Acc. (%)  45.4
+	Correct non corrupted: 27995
+	Accuracy non_corrupted: 49.99107142857142%
+	Correct corrupted: 1050
+	Accuracy corrupted: 13.125%
+Epoch 150 	 Train Loss 1.7 	 Test Loss 1.789 	 Test Acc. (%)  45.4
+CORRECT CORRUPTED 1190
+Epoch 200 	 Train Loss 1.065 	 Test Loss 1.13 	 Test Acc. (%)  68.9
+	Correct non corrupted: 42881
+	Accuracy non_corrupted: 76.57321428571429%
+	Correct corrupted: 1190
+	Accuracy corrupted: 14.875%
+Epoch 200 	 Train Loss 1.065 	 Test Loss 1.13 	 Test Acc. (%)  68.9
+CORRECT CORRUPTED 1455
+Epoch 250 	 Train Loss 0.556 	 Test Loss 0.569 	 Test Acc. (%)  85.5
+	Correct non corrupted: 53234
+	Accuracy non_corrupted: 95.06071428571428%
+	Correct corrupted: 1455
+	Accuracy corrupted: 18.1875%
+Epoch 250 	 Train Loss 0.556 	 Test Loss 0.569 	 Test Acc. (%)  85.5
+CORRECT CORRUPTED 1703
+Epoch 300 	 Train Loss 0.431 	 Test Loss 0.426 	 Test Acc. (%)  89.0
+	Correct non corrupted: 55269
+	Accuracy non_corrupted: 98.69464285714285%
+	Correct corrupted: 1703
+	Accuracy corrupted: 21.2875%
+Epoch 300 	 Train Loss 0.431 	 Test Loss 0.426 	 Test Acc. (%)  89.0
+CORRECT CORRUPTED 1756
+Epoch 350 	 Train Loss 0.389 	 Test Loss 0.381 	 Test Acc. (%)  89.8
+	Correct non corrupted: 55701
+	Accuracy non_corrupted: 99.46607142857142%
+	Correct corrupted: 1756
+	Accuracy corrupted: 21.95%
+Epoch 350 	 Train Loss 0.389 	 Test Loss 0.381 	 Test Acc. (%)  89.8
+CORRECT CORRUPTED 1814
+Epoch 400 	 Train Loss 0.368 	 Test Loss 0.36 	 Test Acc. (%)  90.0
+	Correct non corrupted: 55789
+	Accuracy non_corrupted: 99.62321428571428%
+	Correct corrupted: 1814
+	Accuracy corrupted: 22.675%
+Epoch 400 	 Train Loss 0.368 	 Test Loss 0.36 	 Test Acc. (%)  90.0
+CORRECT CORRUPTED 1865
+Epoch 450 	 Train Loss 0.355 	 Test Loss 0.347 	 Test Acc. (%)  90.2
+	Correct non corrupted: 55863
+	Accuracy non_corrupted: 99.75535714285715%
+	Correct corrupted: 1865
+	Accuracy corrupted: 23.3125%
+Epoch 450 	 Train Loss 0.355 	 Test Loss 0.347 	 Test Acc. (%)  90.2
+CORRECT CORRUPTED 1890
+Epoch 500 	 Train Loss 0.346 	 Test Loss 0.338 	 Test Acc. (%)  90.3
+	Correct non corrupted: 55918
+	Accuracy non_corrupted: 99.85357142857143%
+	Correct corrupted: 1890
+	Accuracy corrupted: 23.625%
+Epoch 500 	 Train Loss 0.346 	 Test Loss 0.338 	 Test Acc. (%)  90.3
+CORRECT CORRUPTED 1941
+Epoch 550 	 Train Loss 0.339 	 Test Loss 0.332 	 Test Acc. (%)  90.4
+	Correct non corrupted: 55946
+	Accuracy non_corrupted: 99.90357142857142%
+	Correct corrupted: 1941
+	Accuracy corrupted: 24.2625%
+Epoch 550 	 Train Loss 0.339 	 Test Loss 0.332 	 Test Acc. (%)  90.4
+CORRECT CORRUPTED 1990
+Epoch 600 	 Train Loss 0.333 	 Test Loss 0.327 	 Test Acc. (%)  90.6
+	Correct non corrupted: 55963
+	Accuracy non_corrupted: 99.93392857142858%
+	Correct corrupted: 1990
+	Accuracy corrupted: 24.875%
+Epoch 600 	 Train Loss 0.333 	 Test Loss 0.327 	 Test Acc. (%)  90.6
+CORRECT CORRUPTED 2011
+Epoch 650 	 Train Loss 0.329 	 Test Loss 0.323 	 Test Acc. (%)  90.6
+	Correct non corrupted: 55969
+	Accuracy non_corrupted: 99.94464285714287%
+	Correct corrupted: 2011
+	Accuracy corrupted: 25.137500000000003%
+Epoch 650 	 Train Loss 0.329 	 Test Loss 0.323 	 Test Acc. (%)  90.6
+CORRECT CORRUPTED 2022
+Epoch 700 	 Train Loss 0.326 	 Test Loss 0.321 	 Test Acc. (%)  90.6
+	Correct non corrupted: 55979
+	Accuracy non_corrupted: 99.9625%
+	Correct corrupted: 2022
+	Accuracy corrupted: 25.275%
+Epoch 700 	 Train Loss 0.326 	 Test Loss 0.321 	 Test Acc. (%)  90.6
+CORRECT CORRUPTED 2036
+Epoch 750 	 Train Loss 0.323 	 Test Loss 0.318 	 Test Acc. (%)  90.7
+	Correct non corrupted: 55986
+	Accuracy non_corrupted: 99.97500000000001%
+	Correct corrupted: 2036
+	Accuracy corrupted: 25.45%
+Epoch 750 	 Train Loss 0.323 	 Test Loss 0.318 	 Test Acc. (%)  90.7
+CORRECT CORRUPTED 2033
+Epoch 800 	 Train Loss 0.321 	 Test Loss 0.317 	 Test Acc. (%)  90.7
+	Correct non corrupted: 55991
+	Accuracy non_corrupted: 99.98392857142858%
+	Correct corrupted: 2033
+	Accuracy corrupted: 25.412499999999998%
+Epoch 800 	 Train Loss 0.321 	 Test Loss 0.317 	 Test Acc. (%)  90.7
+CORRECT CORRUPTED 2074
+Epoch 850 	 Train Loss 0.319 	 Test Loss 0.315 	 Test Acc. (%)  90.7
+	Correct non corrupted: 55992
+	Accuracy non_corrupted: 99.9857142857143%
+	Correct corrupted: 2074
+	Accuracy corrupted: 25.924999999999997%
+Epoch 850 	 Train Loss 0.319 	 Test Loss 0.315 	 Test Acc. (%)  90.7
+CORRECT CORRUPTED 2078
+Epoch 900 	 Train Loss 0.317 	 Test Loss 0.314 	 Test Acc. (%)  90.7
+	Correct non corrupted: 55992
+	Accuracy non_corrupted: 99.9857142857143%
+	Correct corrupted: 2078
+	Accuracy corrupted: 25.974999999999998%
+Epoch 900 	 Train Loss 0.317 	 Test Loss 0.314 	 Test Acc. (%)  90.7
+CORRECT CORRUPTED 2063
+Epoch 950 	 Train Loss 0.317 	 Test Loss 0.314 	 Test Acc. (%)  90.7
+	Correct non corrupted: 55993
+	Accuracy non_corrupted: 99.9875%
+	Correct corrupted: 2063
+	Accuracy corrupted: 25.7875%
+Epoch 950 	 Train Loss 0.317 	 Test Loss 0.314 	 Test Acc. (%)  90.7
+Final Epoch 	 Train Loss 0.314 	 Test Loss 0.312 	 Test Acc. (%)  90.8
