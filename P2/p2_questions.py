@@ -77,8 +77,8 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import random
 from typing import List
 
-output_path = "P2/Results/"
-input_path = "P2/Data/"
+output_path = "Results/"
+input_path = "Data/"
 seed_value = 10
 save_figure = True
 use_cuda = False
@@ -201,7 +201,7 @@ data = np.load(input_path + "P2_E1.npz")
 # bias = False
 # optimizer_class = torch.optim.Adam
 # lr = 1e-3
-# epochs = 2000
+# epochs = 100
 
 # # Train the models
 # losses_models = {}
@@ -441,7 +441,7 @@ for idx, ratio in enumerate(ratios):
 
 corrupted_train = [[sentence_to_num(cypher, vocabulary), sentence_to_num(plaintext, vocabulary)] for cypher, plaintext in zip(corrupted_train_cypher, our_train)]
 
-def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_decrypted, test_encrypted, test_decrypted, vocabulary, use_cuda=False):
+def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_decrypted, test_encrypted, test_decrypted, vocabulary, corrupted, non_corrupted, use_cuda=False):
     model = allocate(model, use_cuda)
     train_encrypted = allocate(train_encrypted, use_cuda)
     train_decrypted = allocate(train_decrypted, use_cuda)
@@ -467,6 +467,7 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
         letters_probs = model(test_encrypted)
         test_loss = loss_fn(letters_probs.log().permute(0, 2, 1), test_decrypted)  # rearrange as to (N_sequences, N_letters, N_lenght_sequences)
         _, maxprob_letters_idx = letters_probs.max(dim=2)  # get letter with maximum prob
+        
         test_loss_hist.append(test_loss.item())
         
         # Total accuracy
@@ -474,41 +475,34 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
         acc_hist.append(accuracy.item())
 
         # Non-corrupted accuracy
-        non_corrupted_positions = []
-        total_non_corrupted = 0
-        for idx, sentence in enumerate(test_encrypted):
-            non_corrupted_positions.append([])
-            for i in range(len(sentence)):
-                if decode_message([sentence[i].item()], vocabulary) != "-":
-                    non_corrupted_positions[idx].append(i)
-                    total_non_corrupted += 1
+        non_corrupted_positions, total_non_corrupted = non_corrupted
+        corrupted_positions, total_corrupted = corrupted
         
-        correct_non_corrupted = 0
-        for idx, sentence in enumerate(non_corrupted_positions):
-            for letter_idx in sentence:
-                if maxprob_letters_idx[idx][letter_idx].item() == test_decrypted[idx][letter_idx]:
-                    correct_non_corrupted += 1
-                
-        # Corrupted accuracy
-        corrupted_positions = []
-        total_corrupted = 0
-        for idx, sentence in enumerate(test_encrypted):
-            corrupted_positions.append([])
-            for i in range(len(sentence)):
-                if sentence[i] not in non_corrupted_positions[idx]:
-                    corrupted_positions[idx].append(i)
-                    total_corrupted += 1
-
-        correct_corrupted = 0
-        for idx, sentence in enumerate(corrupted_positions):
-            for letter_idx in sentence:
-                if maxprob_letters_idx[idx][letter_idx].item() == test_decrypted[idx][letter_idx]:
-                    correct_corrupted += 1
+        
+        
+        
                 
         if epoch % 50 == 0:
+            correct_non_corrupted = 0
+            for idx, sentence in enumerate(non_corrupted_positions):
+                for letter_idx in sentence:
+                    if maxprob_letters_idx[idx][letter_idx].item() == test_decrypted[idx][letter_idx]:
+                        correct_non_corrupted += 1
+                    
+            # Corrupted accuracy
+            correct_corrupted = 0
+            for idx, sentence in enumerate(corrupted_positions):
+                for letter_idx in sentence:
+                    if maxprob_letters_idx[idx][letter_idx].item() == test_decrypted[idx][letter_idx]:
+                        correct_corrupted += 1
             print(f"Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}")
             print(f"\tCorrect non corrupted: {correct_non_corrupted}\n\tAccuracy non_corrupted: {(correct_non_corrupted / total_non_corrupted) * 100}%")
             print(f"\tCorrect corrupted: {correct_corrupted}\n\tAccuracy corrupted: {(correct_corrupted / total_corrupted) * 100}%")
+
+        #print(f"Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}") # TODO : Remove
+        
+        if epoch % 50 == 0:
+            print(f"Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}")
     
     print(f"Final Epoch \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}")
     
@@ -521,6 +515,22 @@ train_encrypted = torch.concat([train_sample[0].unsqueeze(0) for train_sample in
 train_decrypted = torch.concat([train_sample[1].unsqueeze(0) for train_sample in corrupted_train], dim=0)
 test_encrypted = torch.concat([test_sample[0].unsqueeze(0) for test_sample in test], dim=0)
 test_decrypted = torch.concat([test_sample[1].unsqueeze(0) for test_sample in test], dim=0)
+
+non_corrupted_positions = []
+total_non_corrupted = 0
+corrupted_positions = []
+total_corrupted = 0
+
+for idx, sentence in enumerate(test_encrypted):
+    non_corrupted_positions.append([])
+    corrupted_positions.append([])
+    for i in range(len(sentence)):
+        if decode_message([sentence[i].item()], vocabulary) != "-":
+            non_corrupted_positions[idx].append(i)
+            total_non_corrupted += 1
+        else:
+            corrupted_positions[idx].append(i)
+            total_corrupted += 1
 
 # Initialize  Decrypter Network
 letters_embedding_size = 4
@@ -546,7 +556,7 @@ optimizer = torch.optim.Adam(decrypter_network.parameters(), lr=0.01)
 
 decrypter_network, loss_hist, test_loss_hist, acc_hist = train_test(decrypter_network, num_epochs, CE_loss, optimizer,
                                                                     train_encrypted, train_decrypted, test_encrypted, test_decrypted,
-                                                                    vocabulary, use_cuda=use_cuda)
+                                                                    vocabulary, [corrupted_positions, total_corrupted], [non_corrupted_positions, total_non_corrupted], use_cuda=use_cuda)
 
 plt.plot(loss_hist, "-.r", linewidth=1.0, label="train_loss")
 plt.plot(test_loss_hist, "-b", linewidth=1.0, label="test_loss")
