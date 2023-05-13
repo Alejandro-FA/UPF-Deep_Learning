@@ -451,6 +451,8 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
     accuracies, max_accuracy = [], 0
     loss_hist = []
     acc_hist = []
+    corrupted_acc_hist = []
+    non_corrupted_acc_hist = []
     epochs_hist = []
     test_loss_hist = []
 
@@ -481,6 +483,12 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
         
         
         
+        
+                
+                        
+        
+        
+        
                 
         if epoch % 50 == 0:
             correct_non_corrupted = 0
@@ -495,9 +503,15 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
                 for letter_idx in sentence:
                     if maxprob_letters_idx[idx][letter_idx].item() == test_decrypted[idx][letter_idx]:
                         correct_corrupted += 1
+            
             print(f"Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}")
-            print(f"\tCorrect non corrupted: {correct_non_corrupted}\n\tAccuracy non_corrupted: {(correct_non_corrupted / total_non_corrupted) * 100}%")
-            print(f"\tCorrect corrupted: {correct_corrupted}\n\tAccuracy corrupted: {(correct_corrupted / total_corrupted) * 100}%")
+            
+            acc_non_corrupted = correct_non_corrupted / total_non_corrupted
+            non_corrupted_acc_hist.append(acc_non_corrupted)
+            acc_corrupted = correct_corrupted / total_corrupted
+            corrupted_acc_hist.append(acc_corrupted)
+            print(f"\tCorrect non corrupted: {correct_non_corrupted}\n\tAccuracy non_corrupted: {acc_non_corrupted * 100}%")
+            print(f"\tCorrect corrupted: {correct_corrupted}\n\tAccuracy corrupted: {acc_corrupted * 100}%")
 
         #print(f"Epoch {epoch} \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}") # TODO : Remove
         
@@ -506,7 +520,7 @@ def train_test( model, num_epochs, loss_fn, optimizer, train_encrypted, train_de
     
     print(f"Final Epoch \t Train Loss {round(loss.item(),3)} \t Test Loss {round(test_loss.item(),3)} \t Test Acc. (%)  {round(accuracy.item()*100,1)}")
     
-    return model, loss_hist, test_loss_hist, acc_hist
+    return model, loss_hist, test_loss_hist, acc_hist, corrupted_acc_hist, non_corrupted_acc_hist
 
 # Converting training and testing datasets into PyTorch Tensor (N_seqs, lenght_seqs)
 print('Type of corrupted_train:', type(corrupted_train), 'Length of corrupted train:', len(corrupted_train)) # FIXME: Remove this
@@ -554,23 +568,38 @@ num_epochs = 1000
 CE_loss = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(decrypter_network.parameters(), lr=0.01)
 
-decrypter_network, loss_hist, test_loss_hist, acc_hist = train_test(decrypter_network, num_epochs, CE_loss, optimizer,
-                                                                    train_encrypted, train_decrypted, test_encrypted, test_decrypted,
-                                                                    vocabulary, [corrupted_positions, total_corrupted], [non_corrupted_positions, total_non_corrupted], use_cuda=use_cuda)
+decrypter_network, loss_hist, test_loss_hist, acc_hist, corrupted_acc_hist, non_corrupted_acc_hist = train_test(decrypter_network, num_epochs, CE_loss, optimizer,
+                                                                                                                train_encrypted, train_decrypted, test_encrypted, test_decrypted,
+                                                                                                                vocabulary, [corrupted_positions, total_corrupted], [non_corrupted_positions, total_non_corrupted], use_cuda=use_cuda)
 
+fig4 = plt.figure(4)
 plt.plot(loss_hist, "-.r", linewidth=1.0, label="train_loss")
 plt.plot(test_loss_hist, "-b", linewidth=1.0, label="test_loss")
-plt.xlabel("train step", fontsize=14)
-plt.ylabel("loss", fontsize=14)
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Loss function evolution", fontsize=14, fontweight="bold")
 plt.legend()
 plt.show()
 
-plt.plot(acc_hist, linewidth=3.0, label="test_acc")
-plt.xlabel("train step", fontsize=14)
-plt.ylabel("accuracy(%)", fontsize=14)
-plt.ylim([0, 1])
-plt.xlim([0, num_epochs])
-plt.legend()
+
+fig5, axs = plt.subplots(1, 2, figsize=(10, 5))
+fig5.suptitle("Accuracies evolution", fontsize=16, fontweight="bold")
+axs[0].set_title("Overall accuracy", fontsize=14)
+axs[1].set_title("Corrupted vs Non-corrupted accuracy", fontsize=14)
+axs[0].plot(acc_hist, label="Test overall accuracy")
+for i in range(2):
+    axs[i].set_ylabel("Accuracy")
+    axs[i].set_ylim([0, 1])
+
+axs[0].set_xlabel("Epoch")
+axs[0].set_xlim([0, num_epochs])
+axs[0].legend(loc="upper left")
+
+axs[1].set_xlabel("Epoch (x50)")
+axs[1].plot(corrupted_acc_hist, label="Test corrupted accuracy", color="red")
+axs[1].plot(non_corrupted_acc_hist, label="Test NON-corrupted accuracy", color="green")
+axs[1].legend(loc="upper left")
+
 plt.show()
 
 decrypter_network = decrypter_network.cpu()
