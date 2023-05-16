@@ -12,7 +12,7 @@ Andreu Garcies (240618), Alejandro Fernández (242349), Marc Aguilar (242192)
 
 ### How have we adapted the classification loss and the SequenceClassifier module
 
-In order to use the `SequenceClassifier` to solve our problem we modified the last linear layer and the activation function. 
+In order to use the `SequenceClassifier` to solve our problem we modified the **last linear layer** and the **activation function**. 
 
 First of all, after analyzing the shape of the data and the goal of our network we realized that in the last layer we needed at least as many neurons as classes we wanted to distinguish. Therefore, we added the parameter `n_classes` to both the class and the layer (`nn.Linear(hidden_size, n_classes)`). 
 
@@ -86,28 +86,33 @@ Even though it may seem like the model is performing significantly well (with an
 
 <img src="Results/fig7.png" style="zoom:30%"></img>
 
+As we can see, the model has a considerable margin of improvement. In this section, we will explain the different strategies that we implemented to overcome this problem of missclassifying corrupted characters.
 
-
-As we can see, the model has a considerable margin of improvement. In this section, we will explain the different strategies that we implemented to overcome this problem of missclassifying corrupted characters. 
-
-### Data augmentation
-
-First of all we thought that the most straightforward approach was augmenting our initial training dataset by **corrupting it several times** with different corruption rates. After some tests we did not achieve good results, so we augmented our dataset by gathering new data. 
-
-We downloaded and parsed an English dictionary with a custom script. Then we extracted some definitions which matched our target length (32 characters). At the end we ended up with a new dataset of around **63K new sequences**, which can be found at `Data/our_training.pkl`. 
-
-While we were doing hyperparameter modifications in order to improve the performance of the model, we started running out of GPU memory. To handle this issue we started using just a portion of the whole train dataset. Finally, we went back to our first approach since it is the one which gives us the best results.
-
-<span style="color:red">Canviar si ens funciona amb el dataset propi, queda més pro</span>
-
-
-### "Over-corruption" of the dataset
+### Corrupting the training dataset
 
 The training dataset does not come corrupted by default, so it is clear that we have to introduce hyphens in order to have a vocabulary that matches the one of the testing dataset. The question was, how much should we corrupt our training data?
 
 As suggested in class, training the model with a harder task can help it to generalise better. During training we were able to confirm that this was indeed true. After testing some values, we found that a corruption ratio of `30%` provided quite better results than `12.5%` (which is the corruption ratio of the testing dataset).
 
 As a note for reference, we tried with a corruption of `40%` and the model was not able to learn.
+
+### Data augmentation
+
+First of all we thought that the most straightforward approach was augmenting our initial training dataset by **corrupting it several times** with different corruption rates. After some tests we did not achieve good results, so we augmented our dataset by gathering new data.
+
+#### Additional data 1
+
+We downloaded and parsed an English dictionary with a custom script. Then we extracted some definitions that at least have as many letters as our target length (32 characters). At the end we ended up with a new dataset of around **63K new sequences**, which can be found at `Data/our_training.pkl`.
+
+#### Additional data 2
+
+The problem of the previous approach is that most of the time cuts the last word in half, which can lead to a suboptimal training that actually performs worse than with the original 8000 sentences. Therefore, in order to solve this problem we have looked in another text corpus for whole sentences that exactly have a length of 32 letters. With this technique, we have been able to obtain between 33,000 and 100,000 new sentences, depending on how strict we are of what is considered a "full sentence".
+
+#### Problems of using additional data
+
+While we were doing hyper parameter modifications in order to improve the performance of the model, we saw that we ran out of GPU memory very quickly if using the additional data. After some tests with different amounts of additional data, we sadly realised that the benefits of it did not compensate how much we had to reduce the model size in order to fit it into the GPU memory.
+
+<span style="color:red">Canviar si ens funciona amb el dataset propi, queda més pro</span>
 
 ### Bidirectional LSTM
 
