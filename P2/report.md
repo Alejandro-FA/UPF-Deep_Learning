@@ -106,13 +106,13 @@ We downloaded and parsed an English dictionary with a custom script. Then we ext
 
 #### Additional data 2
 
-The problem of the previous approach is that most of the time cuts the last word in half, which can lead to a suboptimal training that actually performs worse than with the original 8000 sentences. Therefore, in order to solve this problem we have looked in another text corpus for whole sentences that exactly have a length of 32 letters. With this technique, we have been able to obtain between 33,000 and 100,000 new sentences, depending on how strict we are of what is considered a "full sentence".
+The problem of the previous approach is that most of the time cuts the last word in half, which can lead to a suboptimal training that actually performs worse than with the original 8000 sentences. Therefore, in order to solve this problem we have looked in another text corpus for whole sentences that exactly have a length of 32 letters. With this technique, we have been able to obtain between 33,000 and 100,000 new sentences, depending on how strict we are of what is considered a "full sentence". You can find this dataset in `CustomData/sentences_32.pkl` and `CustomData/sentences_32_notsoclean.pkl`, respectively.
 
 #### Problems of using additional data
 
 While we were doing hyper parameter modifications in order to improve the performance of the model, we saw that we ran out of GPU memory very quickly if using the additional data. After some tests with different amounts of additional data, we sadly realised that the benefits of it did not compensate how much we had to reduce the model size in order to fit it into the GPU memory.
 
-<span style="color:red">Canviar si ens funciona amb el dataset propi, queda més pro</span>
+However, it was clear for us that with enough GPU memory the results will eventually start to be better by using additional data. In order to satisfy our curiosity, we managed to find a way to run our Jupyter notebook with a better GPU of 40 GB of memory. As we will explain later, the effort was worth it.
 
 ### Bidirectional LSTM
 
@@ -126,7 +126,7 @@ Given the good results obtained in the first exercise, we decided to also implem
 
 ## Final results
 
-The goal of this section is to show the final specification of the model that we have used and its performance, considering all the different aspects that we have explained in the previous section.
+The goal of this section is to show the final specification of the model that we have used and its performance, considering all the different aspects that we have explained in the previous section. In the end we were able to use more than 40,000 sentences as our training dataset (the 8,000 original ones and the 33,000 sentences that we added).
 
 The following table shows the characteristics of the model
 
@@ -141,7 +141,7 @@ The following table shows the characteristics of the model
 | Loss function            | $\text{Cross Entropy Loss}$ |
 | Optimizer                | $\text{Adam}$               |
 
-After $2000$ training iterations, the model manages an overall accuracy of $92.5\%$, correctly classifying the $99.86\%$ of the non-corrupted sentences and $40.45\%$ of the corrupted ones. The accuracy evolution can be seen in this graph
+After $2000$ training iterations, the model manages an overall accuracy of $94.1\%$, correctly classifying the $99.89\%$ of the non-corrupted sentences and $53.8\%$ of the corrupted ones. The accuracy evolution can be seen in this graph:
 
 <img src="Results/fig5.png" style="zoom:30%"></img>
 
