@@ -127,8 +127,8 @@ The following table shows the characteristics of the model
 
 | Parameter                | Value                       |
 | ------------------------ | --------------------------- |
-| Embedding size           | $24$                        |
-| Number of hidden neurons | $80$                        |
+| Embedding size           | $20$                        |
+| Number of hidden neurons | $65$                        |
 | Number of layers         | $4$                         |
 | LSTM                     | $\text{True}$               |
 | Dropout                  | $0.05$                      |
@@ -136,7 +136,7 @@ The following table shows the characteristics of the model
 | Loss function            | $\text{Cross Entropy Loss}$ |
 | Optimizer                | $\text{Adam}$               |
 
-After $2500$ training iterations, the model manages an overall accuracy of $92.5\%$, correctly classifying the $99.86\%$ of the non-corrupted sentences and $40.45\%$ of the corrupted ones. The accuracy evolution can be seen in this graph
+After $2000$ training iterations, the model manages an overall accuracy of $92.5\%$, correctly classifying the $99.86\%$ of the non-corrupted sentences and $40.45\%$ of the corrupted ones. The accuracy evolution can be seen in this graph
 
 <img src="Results/fig5.png" style="zoom:30%"></img>
 
