@@ -8,27 +8,27 @@ Andreu Garcies (240618), Alejandro Fernández (242349), Marc Aguilar (242192)
 
 # Exercise 1
 
-## Train a RNN or LSTM to solve the multi-class sequence classification problem.
+## Training an RNN or LSTM.
 
 ### How have we adapted the classification loss and the SequenceClassifier module
+
 In order to use the `SequenceClassifier` to solve our problem we modified the last linear layer and the activation function. 
 
 First of all, after analyzing the shape of the data and the goal of our network we realized that in the last layer we needed at least as many neurons as classes we wanted to distinguish. Therefore, we added the parameter `n_classes` to both the class and the layer (`nn.Linear(hidden_size, n_classes)`). 
 
-After the first modification and taking into account that we are solving a multiclass classification problem, the activation function which fitted the best was a **Softmax**, which directly returns probability that the sequence belongs to each of the classes. 
+After the first modification and taking into account that we were solving a multiclass classification problem, the activation function which fitted the best was a **Softmax**, which directly returns probability that the sequence belongs to each of the classes. 
 
-### How have we adapted the test_sequence_classifier function to compute the multi-class accuracy
+### How have we adapted the test function to compute the multi-class accuracy
 
-For the confusion matrix we have decided to use the `sklearn.metrics`, in particular the `confusion_matrix` and `ConfusionMatrixDisplay` modules. We use the first module to compute the values of the confusion matrix and the second one to plot the results. We have not modified the `test_sequence_classifier` function in any other meaningful way. One minor detail to remark is that any operation related to confusion matrices cannot be performed in the GPU.
+For the confusion matrix we decided to use the `sklearn.metrics`, in particular the `confusion_matrix` and `ConfusionMatrixDisplay` modules. We used the first module to compute the values of the confusion matrix and the second one to plot the results. We have not modified the `test_sequence_classifier` function in any other meaningful way. One minor detail to remark is that any operation related to confusion matrices cannot be performed in the GPU. Therefore, given that the training process is done in the GPU, we need to move the corresponding data to the CPU prior to the confusion matrix computation. The different confusion matrices will be rpesented when analysing the results of the performance of the model.
 
+## Experimenting with different hyper-parameters.
 
-## Experiment with different models by changing different hyper-parameters (e.g, num_layers, hidden_size, optimiziers, activation_functions for RNNs, etc..) and evaluate the results for each of them on the testing set.
-
-In order to search for the best performance possible we have tried multiple hyperparameter combinations, as well as some other alternatives like using bidirectional LSTMs and weight decay. Here we detail our exploration of several parameters and the results found:
+In order to search for the best performance possible we tried multiple hyperparameter combinations, as well as some other alternatives like using bidirectional LSTMs and weight decay. Here we detail our exploration of several parameters and the results found:
 
 - **Bias**: Using a bias parameter in the model consistently hurts performance, so it was rapidly discarded as a good option.
 
-- **LSTM vs normal RNN**: Using LSTM instead of normal RNN is almost non-negotiable. During the hyperparameter exploration phase it has provided much better results in a consistent manner. So, after some time, we stopped trying normal RNNs.
+- **LSTM vs normal RNN**: Using LSTM instead of normal RNN is almost non-negotiable. During the hyperparameter exploration phase it provided much better results in a consistent manner. So, after some time, we stopped trying normal RNNs.
 
 - **Optimizer used**: For this model we tried multiple optimizers from those available in `pytorch` (in fact, we tried all of them). Although we did not spend time fine-tuning each of the optimizers, we saw that the one that gave us the best immediate was `Adam`, so we continued with it.
 
@@ -52,7 +52,12 @@ The following image shows the loss evolution for the models with all the differe
 
 <img src="Results/fig2.png" style="zoom:30%"></img>
 
-From the plot we can summarize what we have presented in this section: the best results correspond to the model with `4` hidden layers, of `100` neurons each and $\alpha$ = `0.005`.
+From all the hyperparamters that we have previously explained that yield to the best results, we can see how the model with `4` hidden layers, of `50` neurons each and $\alpha$ = `0.001` is the one that generates better results. On the contrary, the model that produces the worst classification results is the one with `4` hidden layers of `10` neurons each and $\alpha$ = `0.0005`. The confusion matrices for both models are
+
+<img src="Results/fig6.png"></img>
+
+>**NOTE:** this report does not include all the confusion matrices for all the models that we have tested. The rest can be found on the notebook
+
 
 
 # Exercise 2
@@ -63,7 +68,11 @@ In order to discover the **keyword** we designed a very simple algorithm which c
 
 ## Analyze the new dataset & Define the new alphabet
 
-We can observe that the distribution of both **train and test** plaintexts is similar. This is what we expected since none of them are corrupted, and they are both in English so they should follow a similar distribution. On the other hand, in the test cyphertext dataset we can observe how a **new character** arises ("-"), and is the most frequent one. The train cyphertext character distribution has no anomalies. 
+We can observe that the distribution of both **train and test** plaintexts is similar.
+
+<img src="Results/fig3.png" style="zoom:22%"></img>
+
+This is what we expected since none of them are corrupted, and they are both in English so they should follow a similar distribution. On the other hand, in the test cyphertext dataset we can observe how a **new character** arises ("-"), and is the most frequent one. The train cyphertext character distribution has no anomalies. This will cause some problems that will be addressed afterwards. 
 
 The construction of the new alphabet was quite straightforward since we just had to add the new character ("-") to the abecedary.  
 
@@ -71,13 +80,15 @@ The construction of the new alphabet was quite straightforward since we just had
 
 The first time that we executed the model, we obtained the following results
 
-<span style="color:red">**TO BE COMPLETED**</span>
+<img src="Results/fig8.png" style="zoom:30%"></img>
 
-Even though it may seem like the model is performing significantly well (with an accuracy of $\approx 88\%$) we need to take the following into account: *$12.5\%$ of the sentences of the testing dataset have been corrupted*. This means that the model is facing some data that it has not seen during the training step, thus, it is very likely that it does not know how to handle it. Indeed, if we separate the accuracy in corrupted characters vs non-corrupted characters that the model has a very poor performance when it comes to predict the plaintext character of a corrupted character `-`.
+Even though it may seem like the model is performing significantly well (with an accuracy of $\approx 88\%$) we need to take the following into account: *$12.5\%$ of the sentences of the testing dataset have been corrupted*. This means that the model is facing some data that it has not seen during the training step, thus, it is very likely that it does not know how to handle it. Indeed, if we separate the accuracy in corrupted characters vs non-corrupted characters that the model has a very poor performance when it comes to predict the plaintext character of a corrupted character `-` (only $\approx7\%$ at maximum). Moreover, note how the model manages to achieve a reasonable performance with the training dataset, but it gets worse as unseen data comes into play.
 
-<span style="color:red">**INSERT IMAGE WITH THE DEFAULT RESULTS**</span>
+<img src="Results/fig7.png" style="zoom:30%"></img>
 
-As we can see, the model has a considerable margin of improvement. In this section, we will explain the different strategies that we implemented to overcome this problem of missclassifying corrupted characters and we are going to see how much of an impact they had in the overall performance of the model. 
+
+
+As we can see, the model has a considerable margin of improvement. In this section, we will explain the different strategies that we implemented to overcome this problem of missclassifying corrupted characters. 
 
 ### Data augmentation
 
@@ -106,4 +117,34 @@ In order to implement it we just set the flag `bidirectional_lstm` to `True` and
 
 ### Dropout
 
-Given the good results obtained in the first exercise, we have decided to also implement dropout for this case. Once again, it appears to have very beneficial effects.
+Given the good results obtained in the first exercise, we decided to also implement dropout for this case. Once again, it appears to have very beneficial effects.
+
+## Final results
+
+The goal of this section is to show the final specification of the model that we have used and its performance, considering all the different aspects that we have explained in the previous section.
+
+The following table shows the characteristics of the model
+
+| Parameter                | Value                       |
+| ------------------------ | --------------------------- |
+| Embedding size           | $24$                        |
+| Number of hidden neurons | $80$                        |
+| Number of layers         | $4$                         |
+| LSTM                     | $\text{True}$               |
+| Dropout                  | $0.05$                      |
+| Bidirectional LSTM       | $\text{True}$               |
+| Loss function            | $\text{Cross Entropy Loss}$ |
+| Optimizer                | $\text{Adam}$               |
+
+After $2500$ training iterations, the model manages an overall accuracy of $92.5\%$, correctly classifying the $99.86\%$ of the non-corrupted sentences and $40.45\%$ of the corrupted ones. The accuracy evolution can be seen in this graph
+
+<img src="Results/fig5.png" style="zoom:30%"></img>
+
+We would like to remark that due to performance issues, we have only separately computed the accuracy for the corrupted and non-corrupted sentences every 50 iterations.
+
+
+
+
+
+
+
