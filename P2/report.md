@@ -82,7 +82,7 @@ The first time that we executed the model, we obtained the following results
 
 <img src="Results/fig8.png" style="zoom:30%"></img>
 
-Even though it may seem like the model is performing significantly well (with an accuracy of $\approx 88\%$) we need to take the following into account: *$12.5\%$ of the sentences of the testing dataset have been corrupted*. This means that the model is facing some data that it has not seen during the training step, thus, it is very likely that it does not know how to handle it. Indeed, if we separate the accuracy in corrupted characters vs non-corrupted characters that the model has a very poor performance when it comes to predict the plaintext character of a corrupted character `-` (only $\approx7\%$ at maximum). Moreover, note how the model manages to achieve a reasonable performance with the training dataset, but it gets worse as unseen data comes into play.
+Even though it may seem like the model is performing significantly well (with an accuracy of $\approx 88\%$) we need to take the following into account: *$12.5\%$ of the sentences of the testing dataset have been corrupted*. This means that the model is facing some data that it has not seen during the training step, thus, it is very likely that it does not know how to handle it. Indeed, if we separate the accuracy in corrupted characters vs non-corrupted characters we see that the model has a very poor performance when it comes to predict the plaintext character of a corrupted character `-`. At most, it achieves a $\approx4\%$ accuracy, which means that the model is simply guessing the decryption of the decoded character $\frac{1}{26} = 3.8\%$. Moreover, note how the model manages to almost minimize the error for the training dataset, but it gets worse as unseen data comes into play (testing dataset).
 
 <img src="Results/fig7.png" style="zoom:30%"></img>
 
@@ -145,9 +145,23 @@ After $2000$ training iterations, the model manages an overall accuracy of $94.1
 
 <img src="Results/fig5.png" style="zoom:30%"></img>
 
-We would like to remark that due to performance issues, we have only separately computed the accuracy for the corrupted and non-corrupted sentences every 50 iterations.
+We would like to remark that due to performance issues, we have only separately computed the accuracy for the corrupted and non-corrupted sentences every 50 iterations. Nevertheless, we can clearly see a big improvement, specially when it comes to properly predict the decrypted character of a corrupted one.
 
 
+
+To conclude with the performance analysis, we can claim that the different strategies that we implemented and added to our model had a significant and positive impact on the overall performance. Not only we managed to achieve perfect performance for the non corrupted sentences in less training iterations
+
+| ORIGINAL non-corrupted accuracy     | FINAL non-corrupted accuracy        |
+| ----------------------------------- | ----------------------------------- |
+| $\approx 93\%$ in $1000$ iterations | $\approx 100\%$ in $400$ iterations |
+
+but we improved our model such as rather than guessing the decryption of a corrupted character, it gained some kind of knowledge on how to handle them.
+
+| ORIGINAL corrupted accuracy | FINAL corrupted accuracy |
+| --------------------------- | ------------------------ |
+| $\approx 6\%$               | $\approx 53.8\%$         |
+
+However, we still believe that both having access to more resources to allow the model model to be  bigger and designing a more accurate dataset could still result in a better performance.
 
 
 
