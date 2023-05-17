@@ -6,7 +6,13 @@ Group 8
 
 Andreu Garcies (240618), Alejandro Fernández (242349), Marc Aguilar (242192)
 
-> **IMPORTANT NOTE**: We have decided to the A100 Colab Pro GPU with 40 GB for the last exercise. Therefore, with a GPU that has less memory it might not be possible to run the notebook.
+> **Environment note**: We have worked both in a local installation of `Python 3.10.9` and in Google Colab. The libraries used locally (and their version) can be found in the `requirements.txt` file. You can install these dependencies with the following command:
+>
+> ```bash
+> python -m pip install --upgrade -r requirements.txt
+> ```
+
+> **IMPORTANT NOTE**: We have decided to use Colab Pro for the last exercise. It allows to use a runtime with the Nvidia A100 GPU, which has 40 GB of VRAM. Therefore, a GPU with less memory will likely cause `OutOfMemory` errors in the last exercise.
 
 # Exercise 1
 
@@ -24,7 +30,7 @@ After the first modification and taking into account that we were solving a mult
 
 For the confusion matrix we decided to use the `sklearn.metrics`, in particular the `confusion_matrix` and `ConfusionMatrixDisplay` modules. We used the first module to compute the values of the confusion matrix and the second one to plot the results. We have not modified the `test_sequence_classifier` function in any other meaningful way. One minor detail to remark is that any operation related to confusion matrices cannot be performed in the GPU. Therefore, given that the training process is done in the GPU, we need to move the corresponding data to the CPU prior to the confusion matrix computation. The different confusion matrices will be rpresented when analysing the results of the performance of the model.
 
-## Experimenting with different hyperparameters.
+## Experimenting with different hyperparameters
 
 In order to search for the best performance possible we tried multiple hyperparameter combinations, as well as some other alternatives like using bidirectional LSTMs and weight decay. Here we detail our exploration of several parameters and the results found:
 
@@ -50,17 +56,40 @@ Other configurations tried that were removed in the end:
 
 - **Weight decay**: Another overfitting countermeasure that we tried was weight decay, which did not provide any valuable results. Dropout provided better results. Furthermore, weight decay in combination with dropout also reduced the final accuracy obtained by the model. So we decided to not use it at all.
 
+## Results and discussion
+
 The following image shows the loss evolution for the models with all the different hyperparameters that we tested:
 
 <img src="Results/fig2.png" style="zoom:30%"></img>
 
-From all the hyperparamters that we have previously explained that yield to the best results, we can see how the model with `4` hidden layers, of `50` neurons each and $\alpha$ = `0.001` is the one that generates better results. On the contrary, the model that produces the worst classification results is the one with `4` hidden layers of `10` neurons each and $\alpha$ = `0.0005`. The confusion matrices for both models are
+From all the hyperparamters that we have previously explained that yield to the best results, we can see how the model with `4` hidden layers, of `50` neurons each and $\alpha$ = `0.001` is the one that generates better results. On the contrary, the model that produces the worst classification results is the one with `4` hidden layers of `10` neurons each and $\alpha$ = `0.0005`. Below we show the an overview of the results in tabular form:
+
+| Hidden size | Learning rate | Test accuracy |
+| :---------: | :-----------: | :-----------: |
+|    $10$     |   $10^{-3}$   |    68.9 %     |
+|    $20$     |   $10^{-3}$   |    93.3 %     |
+|    $50$     |   $10^{-3}$   |    95.6 %     |
+|   **100**   |  **10^-3^**   |  **96.7 %**   |
+|    $10$     | $0.5·10^{-3}$ |    63.3 %     |
+|    $20$     | $0.5·10^{-3}$ |    91.1 %     |
+|    $50$     | $0.5·10^{-3}$ |    88.9 %     |
+|    $100$    | $0.5·10^{-3}$ |    91.1 %     |
+
+> **NOTE:** we have observed different results in different machines, but at least one of the 8 versions that we try gives an accuracy of 95% or higher.
+
+### Confusion matrices of the models
+
+The confusion matrices for the models that have obtained the worst and best result are, respectively, the following ones:
 
 <img src="Results/fig6.png"></img>
 
->**NOTE:** this report does not include all the confusion matrices for all the models that we have tested. The rest can be found on the notebook
+As expected, the **confusion matrix of the best-performing model** shows an almost perfect diagonal, indicating that the predicted label matches the true label. On the other hand, the **confusion matrix of the worst-performing model** presents an interesting pattern: the model seems to ==over predict== both ==the class that contains signals of lowest frequency== and the ==class that contains signals of the highest frequency==. This seems quite reasonable, since in case of not having enough accuracy to distinguish 2 signals it is easier to err to the extremes. It should be noted though, that this problem is not equally distributed, since the signals with highest frequency are much better classified than those with lower frequency.
 
->**NOTE 2:** we have observed different results in different machines, but at least one of the 8 versions that we try gives an accuracy of 95% or higher.
+The figure displayed in this report was obtained in our local environment, but this pattern was also reproduced in the Colab environment.
+
+>**NOTE:** this report does not include all the confusion matrices for all the models that we have tested. The rest of them can be found on the Jupyter notebook, although they do not exactly match the results discussed here because they were obtained in a different execution of a different environment (in Google Colab instead of our local environment).
+
+
 
 
 # Exercise 2
@@ -151,7 +180,7 @@ After $2000$ training iterations, the model manages an overall accuracy of $94.1
 
 We would like to remark that due to performance issues, we have only separately computed the accuracy for the corrupted and non-corrupted sentences every 50 iterations. Nevertheless, we can clearly see a big improvement, specially when it comes to properly predict the decrypted character of a corrupted one.
 
-To conclude with the performance analysis, we can claim that the different strategies that we implemented and added to our model had a significant and positive impact on the overall performance. Not only we managed to achieve almost perfect performance for the non corrupted sentences in less training iterations:
+To conclude with the performance analysis, we can claim that the different strategies that we implemented and added to our model had a significant and positive impact on the overall performance. Not only we managed to achieve almost perfect performance for the non-corrupted sentences in less training iterations:
 
 | ORIGINAL non-corrupted accuracy     | FINAL non-corrupted accuracy        |
 | ----------------------------------- | ----------------------------------- |
