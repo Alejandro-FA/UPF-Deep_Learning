@@ -7,5 +7,7 @@ matplotlib
 ipympl
 opencv-python
 torch
+torchvision
+torchaudio
 ipykernel
 scikit-learn

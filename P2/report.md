@@ -6,6 +6,8 @@ Group 8
 
 Andreu Garcies (240618), Alejandro Fernández (242349), Marc Aguilar (242192)
 
+> **IMPORTANT NOTE**: 
+
 # Exercise 1
 
 ## Training an RNN or LSTM.
