@@ -1,0 +1,17 @@
+Train loss: 1.7166950702667236
+Train accuracy:
+[]
+Test accuracy: 44.629686539643515
+Epochs: 5
+Loss function: CrossEntropyLoss()
+Optimizer: SGD (
+Parameter Group 0
+    dampening: 0
+    differentiable: False
+    foreach: None
+    lr: 0.01
+    maximize: False
+    momentum: 0
+    nesterov: False
+    weight_decay: 0
+)

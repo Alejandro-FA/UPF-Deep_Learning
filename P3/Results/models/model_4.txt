@@ -1,0 +1,19 @@
+Train loss: 0.43620938062667847
+Train accuracy:
+[]
+Test accuracy: 85.1759373079287
+Epochs: 5
+Loss function: CrossEntropyLoss()
+Optimizer: Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    capturable: False
+    differentiable: False
+    eps: 1e-08
+    foreach: None
+    fused: None
+    lr: 0.005
+    maximize: False
+    weight_decay: 0
+)

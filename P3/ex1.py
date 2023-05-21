@@ -4,20 +4,42 @@ import numpy as np
 import scipy.io as sio
 import torch.nn as nn
 import torch
-import torchvision
+import torchvision as T
 import torchvision.transforms as transforms
 from PIL import Image
+from os import listdir
+from os.path import exists
+import re
+
 
 
 data_path = 'P3/Data/'
 results_path = 'P3/Results/'
+seed_value = 10
 
-train_mat = sio.loadmat(data_path + 'svhn/train_32x32.mat')
+torch.manual_seed(seed_value)
 
-images = train_mat['X']
-labels = train_mat['y'].squeeze()
+run_train = True
+run_test = True
 
-example_image, example_label = images[:,:,:,0], labels[0] 
+# Setting the model name
+if run_train:
+    files = listdir(results_path + "models/")
+    models = list(filter(lambda name: ".ckpt" in name, files))
+    pattern = re.compile("model_(\d+).ckpt")
+    indices = [int(pattern.search(model).group(1)) for model in models]
+    if len(models) == 0:
+        indices = [0]
+    train_model_name = "model_" + str(max(indices) + 1)
+    test_model_name = train_model_name
+    print(f"Training model {train_model_name}")
+
+
+if run_test and not run_train:
+    test_model_name = input("Introduce the model name that you want to test: ")
+    while not exists(results_path + "models/" + test_model_name + ".ckpt"):
+        print("Model does not exist")
+        test_model_name = input("Introduce the model name that you want to test: ")
 
 
 ## Tests
@@ -32,9 +54,17 @@ class ConvNet(nn.Module):
         #input : 3 channel, output 16 channel, filter size : 5x5
         
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3,  padding=1)
-        #input : 16 channel, output 16 channel, filter size : 3x3
+        #input : 16 channel, output 32 channel, filter size : 3x3
+
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding = 1)
+        #input : 32 channel, output 64 channel, filter size : 3x3
+
+        self.conv4 = nn.Conv2d(64, 128, kernel_size=3, padding = 1)
+        #input : 64 channel, output 128 channel, filter size : 3x3
         
-        self.fc = nn.Linear(8*8*32, num_classes)
+        self.fc1 = nn.Linear(512, 128)
+        self.fc2 = nn.Linear(128, num_classes)
+
         
         self.maxpool= nn.MaxPool2d(kernel_size=2, stride=2)
         self.relu = nn.ReLU()
@@ -48,9 +78,21 @@ class ConvNet(nn.Module):
         out = self.conv2(out)
         out = self.relu(out)
         out = self.maxpool(out)
-        out = out.reshape(out.size(0), -1) #128,32,7,7 -> 128,8*8*32
-        out = self.fc(out) # we don't need sigmoid or other activation function at the end beacuse we will use nn.CrossEntropyLoss() (check documentation to understand why)
-        
+
+        out = self.conv3(out)
+        out = self.relu(out)
+        out = self.maxpool(out)
+
+        out = self.conv4(out)
+        out = self.relu(out)
+        out = self.maxpool(out)
+        # print(out.shape)
+        out = out.reshape(out.size(0), -1) #128,32,8,8 -> 128,8*8*32
+        # print(out.shape)
+        out = self.fc1(out) 
+        out = self.relu(out)
+        out = self.fc2(out) # we don't need sigmoid or other activation function at the end beacuse we will use nn.CrossEntropyLoss() (check documentation to understand why)
+
         return out 
 
 
@@ -62,8 +104,7 @@ criterion = nn.CrossEntropyLoss()
 
 #Initialize optimizer 
 learning_rate = .001
-optimizer = torch.optim.Adam(CNN.parameters(),lr = learning_rate)
-
+optimizer = torch.optim.Adam(CNN.parameters(), lr = learning_rate)
 
 # Device configuration (choose GPU if it is available )
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -100,6 +141,7 @@ class SVHN(torch.utils.data.Dataset):
 
 tr = transforms.Compose([
         transforms.ToTensor(), 
+        transforms.RandomRotation(degrees=(-30,30)),
         transforms.Normalize(mean = [.5], std = [.5])
         ])
 
@@ -111,13 +153,18 @@ train_loader = torch.utils.data.DataLoader(dataset=SVHNTrain,
                                                batch_size=256, 
                                                shuffle=True)
 
-
-if False:
+# Train and save the model
+if run_train:
+    print(f"Training with {len(SVHNTrain)} images")
     CNN.train() # Set the model in train mode
-    total_step = len(images)
+    total_step = len(train_loader)
+    accuracies = []
+    train_losses = []
     # Iterate over epochs
     for epoch in range(num_epochs):
         # Iterate the dataset
+        # total = 0
+        # correct = 0
         for i, (images, labels) in enumerate(train_loader):
             # Get batch of samples and labels
             images = images.to(device)
@@ -126,26 +173,47 @@ if False:
             # Forward pass
             outputs = CNN(images)
             loss = criterion(outputs, labels)
-            
+            train_losses.append(loss.item())        
+
             # Backward and optimize
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             
+            # with torch.no_grad():
+            #     _, predicted = torch.max(outputs.data, 1)
+
+            #     # compare with the ground-truth
+            #     total += labels.size(0)
+            #     correct += (predicted == labels).sum().item()
+            
+            
             if (i+1) % 100 == 0:
                 print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
                         .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
+        
+        # accuracies.append(100 * correct / total)
+        
+        # print(f"\nEpoch {epoch+1}:")
+        # print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Accuracy: {:.4f}%\n' 
+        #         .format(epoch+1, num_epochs, i+1, total_step, loss.item(), 100 * correct / total))
+        
+
+    with open(results_path + "models/" + train_model_name + ".txt", "w") as results_txt:
+        results_txt.write(f"Train loss: {train_losses}\n")
+        results_txt.write(f"Train accuracy:\n{accuracies}\n")
+
 
     # Save the model checkpoint
-    torch.save(CNN.state_dict(), results_path+'/model_1.ckpt')
-#to load : model.load_state_dict(torch.load(save_name_ori))
+    torch.save(CNN.state_dict(), results_path + "models/" + train_model_name + ".ckpt")
 
-CNN.load_state_dict(torch.load(results_path+'/model_1.ckpt'))
-if True:
+
+if run_test:
+    CNN.load_state_dict(torch.load(results_path + "models/" + test_model_name + ".ckpt"))
     # Load test dataset
     SVHNTest = SVHN(data_path+'/svhn/test_32x32.mat', tr)
     test_loader = torch.utils.data.DataLoader(dataset=SVHNTest,
-                                               batch_size=64, 
+                                               batch_size=256, 
                                                shuffle=True)
     CNN.eval() # Set the model in evaluation mode
     
@@ -166,4 +234,12 @@ if True:
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     
-        print('Test Accuracy of the model on the {} test images: {} %'.format(len(test_loader), 100 * correct / total))
+        print('Test Accuracy of the model on the {} test images: {} %'.format(len(SVHNTest), 100 * correct / total))
+
+        with open(results_path + "models/" + test_model_name + ".txt", "a") as results_txt:
+            results_txt.write(f"Test accuracy: {100 * correct / total}\n")
+
+with open(results_path + "models/" + test_model_name + ".txt", "a") as results_txt:
+    results_txt.write(f"Epochs: {num_epochs}\n")
+    results_txt.write(f"Loss function: {criterion}\n")
+    results_txt.write(f"Optimizer: {optimizer}\n")

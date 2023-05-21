@@ -1,0 +1,5 @@
+Train loss: 0.36414724588394165
+Train accuracy:
+[]
+Test accuracy: 86.40519360786725
+Learning rate: 0.001
