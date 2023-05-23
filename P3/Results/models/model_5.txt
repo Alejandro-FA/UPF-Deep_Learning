@@ -1,15 +1,17 @@
-Test accuracy: 83.22065150583897
+Test accuracy: 85.35648432698217
 Epochs: 5
 Loss function: CrossEntropyLoss()
-Optimizer: SGD (
+Optimizer: Adam (
 Parameter Group 0
-    dampening: 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    capturable: False
     differentiable: False
+    eps: 1e-08
     foreach: None
-    lr: 0.005
+    fused: None
+    lr: 0.0005
     maximize: False
-    momentum: 0.9
-    nesterov: False
     weight_decay: 0
 )
 ----------------------------------------------------------------

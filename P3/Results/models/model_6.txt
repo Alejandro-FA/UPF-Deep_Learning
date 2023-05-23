@@ -1,4 +1,4 @@
-Test accuracy: 19.587430854333128
+Test accuracy: 85.7598340503995
 Epochs: 5
 Loss function: CrossEntropyLoss()
 Optimizer: Adam (
@@ -10,9 +10,9 @@ Parameter Group 0
     eps: 1e-08
     foreach: None
     fused: None
-    lr: 0.005
+    lr: 0.001
     maximize: False
-    weight_decay: 0.3
+    weight_decay: 0
 )
 ----------------------------------------------------------------
         Layer (type)               Output Shape         Param #

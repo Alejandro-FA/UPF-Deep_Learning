@@ -1,0 +1,34 @@
+Test accuracy: 83.76229256299939
+Epochs: 5
+Loss function: CrossEntropyLoss()
+Optimizer: SGD (
+Parameter Group 0
+    dampening: 0
+    differentiable: False
+    foreach: None
+    lr: 0.005
+    maximize: False
+    momentum: 0.9
+    nesterov: False
+    weight_decay: 0
+)
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+            Conv2d-1           [-1, 16, 32, 32]           1,216
+              ReLU-2           [-1, 16, 32, 32]               0
+         MaxPool2d-3           [-1, 16, 16, 16]               0
+            Conv2d-4           [-1, 32, 16, 16]           4,640
+              ReLU-5           [-1, 32, 16, 16]               0
+         MaxPool2d-6             [-1, 32, 8, 8]               0
+            Linear-7                   [-1, 10]          20,490
+================================================================
+Total params: 26,346
+Trainable params: 26,346
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 0.01
+Forward/backward pass size (MB): 0.42
+Params size (MB): 0.10
+Estimated Total Size (MB): 0.53
+----------------------------------------------------------------

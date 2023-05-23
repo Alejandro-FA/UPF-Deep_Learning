@@ -11,3 +11,4 @@ torchvision
 torchaudio
 ipykernel
 scikit-learn
+torchsummary

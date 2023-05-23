@@ -1,4 +1,4 @@
-Test accuracy: 86.61647203441917
+Test accuracy: 86.07483097725876
 Epochs: 5
 Loss function: CrossEntropyLoss()
 Optimizer: Adam (

@@ -1,17 +1,15 @@
-Test accuracy: 89.41303011677935
+Test accuracy: 59.21558082360172
 Epochs: 5
 Loss function: CrossEntropyLoss()
-Optimizer: Adam (
+Optimizer: SGD (
 Parameter Group 0
-    amsgrad: False
-    betas: (0.9, 0.999)
-    capturable: False
+    dampening: 0
     differentiable: False
-    eps: 1e-08
     foreach: None
-    fused: None
     lr: 0.001
     maximize: False
+    momentum: 0.9
+    nesterov: False
     weight_decay: 0
 )
 ----------------------------------------------------------------
@@ -23,20 +21,14 @@ Parameter Group 0
             Conv2d-4           [-1, 32, 16, 16]           4,640
               ReLU-5           [-1, 32, 16, 16]               0
          MaxPool2d-6             [-1, 32, 8, 8]               0
-            Conv2d-7             [-1, 64, 8, 8]          18,496
-              ReLU-8             [-1, 64, 8, 8]               0
-         MaxPool2d-9             [-1, 64, 4, 4]               0
-           Conv2d-10            [-1, 128, 4, 4]          73,856
-             ReLU-11            [-1, 128, 4, 4]               0
-        MaxPool2d-12            [-1, 128, 2, 2]               0
-           Linear-13                   [-1, 10]           5,130
+            Linear-7                   [-1, 10]          20,490
 ================================================================
-Total params: 103,338
-Trainable params: 103,338
+Total params: 26,346
+Trainable params: 26,346
 Non-trainable params: 0
 ----------------------------------------------------------------
 Input size (MB): 0.01
-Forward/backward pass size (MB): 0.53
-Params size (MB): 0.39
-Estimated Total Size (MB): 0.93
+Forward/backward pass size (MB): 0.42
+Params size (MB): 0.10
+Estimated Total Size (MB): 0.53
 ----------------------------------------------------------------
