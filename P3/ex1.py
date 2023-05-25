@@ -35,6 +35,8 @@ device = torch.device(
     'cpu'
 )
 
+print("Device selected:", device)
+
 
 """
 This piece of code is used to store the models for future reference, or to load
@@ -301,7 +303,7 @@ with open(results_path + "models/" + test_model_name + ".txt", "a") as results_t
     results_txt.write(f"Loss function: {criterion}\n")
     results_txt.write(f"Optimizer: {optimizer}\n")
     sys.stdout = results_txt # FIXME: This is 
-    torchsummary.summary(CNN, (3, 32, 32))
+    torchsummary.summary(CNN.to('cpu'), (3, 32, 32))
 
 
 sys.stdout = sys.__stdout__
