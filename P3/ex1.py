@@ -211,7 +211,7 @@ def train_cnn(model, train_loader, epochs, optimizer, criterion=nn.CrossEntropyL
             
             # Get batch of samples and labels
             images = images.to(device)
-            labels = labels.to(device)
+            labels = labels.to(device, dtype=torch.long)
             
             # Forward pass
             outputs = CNN(images)
