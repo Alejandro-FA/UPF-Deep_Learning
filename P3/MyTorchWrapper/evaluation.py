@@ -33,7 +33,7 @@ class BasicEvaluation:
             results (EvaluationResults): where to store the results
         """        
         loss = self.loss_criterion(outputs, labels)
-        results._add_result('loss', loss.item())
+        results._add_result('loss', loss.item(), outputs.size(0))
         return loss
     
 
@@ -54,7 +54,7 @@ class AccuracyEvaluation(BasicEvaluation):
             total = labels.size(0)
             correct = (predicted == labels).sum().item()  # Compare with ground-truth
             accuracy = 100 * correct / total
-            results._add_result('accuracy', accuracy)
+            results._add_result('accuracy', accuracy, outputs.size(0))
 
         return super().__call__(outputs, labels, results)
     

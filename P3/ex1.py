@@ -198,7 +198,7 @@ evaluation = mtw.AccuracyEvaluation(loss_criterion=nn.CrossEntropyLoss()) # Cros
 Train the model
 """
 if run_train: # Train the model
-    start_time = time.time()
+    print(f"Training model {model_id} with {len(SVHNTrain)} images...")
 
     trainer = mtw.Trainer(CNN, evaluation=evaluation, epochs=epochs, optimizer=optimizer, data_loader=train_loader, device=device)
     trainer.seed_value = seed_value
@@ -232,8 +232,8 @@ Test the model
 if run_test:
     iomanager.load(model=CNN, model_id=model_id)
     tester = mtw.Tester(model=CNN, evaluation=evaluation, data_loader=test_loader, device=device)
-    test_results = tester.test()
-    accuracy = np.average(test_results.accuracy)
+    test_results = tester.test().averaged()
+    accuracy = test_results.accuracy
     print(f'Test Accuracy of the model on the {len(SVHNTest)} test images: {accuracy} %')
 
     if run_train:
@@ -241,14 +241,8 @@ if run_test:
         summary = mtw.training_summary(trainer, test_results)
         iomanager.save_summary(summary_content=summary, model_id=model_id)
 
-# Compute model paramters
-def compute_model_params(model):
-  params = 0
-  for p in model.parameters():
-    params+= p.numel()
-  return params
-
-print(compute_model_params(CNN))
+    # Compute model paramters
+    print("Number of parameters of the model:", mtw.get_model_params(CNN))
 
 
 # """# Ex. 2
