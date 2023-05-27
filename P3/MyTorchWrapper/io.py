@@ -1,5 +1,5 @@
 import re
-from os import listdir
+import os
 import torch
 from torch import nn
 from typing import Optional
@@ -18,7 +18,7 @@ class _PathManager:
         Args:
             models_dir (str): Folder path where the models are stored.
         """                
-        self.dir_path = models_dir
+        self.models_dir = models_dir
 
 
     def get_model_name(self, model_id: int) -> str:
@@ -30,24 +30,13 @@ class _PathManager:
     def get_model_path(self, model_id: int) -> str:
         """Given a model id, it returns the path of its corresponding model file (.ckpt)
         """        
-        return self.dir_path + self.get_model_name(model_id) + self.model_ext
+        return self.models_dir + self.get_model_name(model_id) + self.model_ext
     
 
     def get_summary_path(self, model_id: int) -> str:
         """Given a model id, it returns its corresponding training summary file path.
         """        
-        return self.dir_path + self.get_model_name(model_id) + self.summary_ext
-
-
-    def next_id_available(self) -> int:
-        """Computes the next index available for storing a new model
-        Returns:
-            int: next index available
-        """        
-        files = listdir(self.dir_path)
-        models = list(filter(lambda name: _PathManager.model_ext in name, files))
-        indices = [int(_PathManager.filename_pattern.search(model).group(1)) for model in models]
-        return 0 if not indices else max(indices)
+        return self.models_dir + self.get_model_name(model_id) + self.summary_ext
 
 
 
@@ -59,14 +48,32 @@ class IOManager:
         """
         Args:
             storage_dir (str): Folder path where the models are stored.
-        """        
+        """ 
+        self.storage_dir = storage_dir       
         self._path_manager = _PathManager(storage_dir)
 
 
     def next_id_available(self) -> int:
         """Returns the next identification number available for a model.
-        """        
-        return self._path_manager.next_id_available()
+        """
+        files = os.listdir(self.storage_dir)
+        models = list(filter(lambda name: self._path_manager.model_ext in name, files))
+        indices = [int(self._path_manager.filename_pattern.search(model).group(1)) for model in models]
+        return 1 if not indices else max(indices) + 1        
+    
+
+    def exists(self, model_id: int) -> bool:
+        """Checks if a given model already exists.
+
+        Args:
+            model_id (int): Identification number of the model to search
+
+        Returns:
+            bool: Whether a model has already been saved with the specified id
+            or not.
+        """
+        model_path = self._path_manager.get_model_path(model_id)        
+        return os.path.exists(model_path)
 
 
     def save(self, model: nn.Module, model_id: int) -> None:
@@ -86,7 +93,8 @@ class IOManager:
         in the model file (identified with model_id) inside the model.
 
         Args:
-            model (nn.Module): Neural Network model in which sto store the paramers. It must have the appropriate architecture.
+            model (nn.Module): Neural Network model in which to store the parameters.
+            It must have the appropriate architecture.
             model_id (int): Identification number of the model to load.
         """        
         file_path = self._path_manager.get_model_path(model_id)

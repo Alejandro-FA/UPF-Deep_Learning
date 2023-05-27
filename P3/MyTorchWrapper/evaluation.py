@@ -1,5 +1,5 @@
 import torch
-from typing import Dict
+from .evaluation_results import EvaluationResults
 
 
 class BasicEvaluation:
@@ -23,42 +23,18 @@ class BasicEvaluation:
         self.loss_list = []
 
 
-    def __call__(self, outputs: torch.Tensor, labels: torch.Tensor) -> float:
+    def __call__(self, outputs: torch.Tensor, labels: torch.Tensor, results: EvaluationResults) -> torch.Tensor:
         """Evaluates the performance of the output of a torch model and returns
         the loss.
 
         Args:
             outputs (torch.Tensor): the output of the model
             labels (torch.Tensor): the target labels of each point / sample
+            results (EvaluationResults): where to store the results
         """        
         loss = self.loss_criterion(outputs, labels)
-        self.loss_list.append(loss.item())
+        results._add_result('loss', loss.item())
         return loss
-
-
-    def get_results(self, only_last: bool = False) -> Dict[str, float]:
-        """Gets the results of previous evaluation calls.
-
-        Args:
-            only_last (bool, optional): Whether to just get the last result or
-            the whole history. Defaults to False.
-
-        Returns:
-            Dict[str, float]: A dictionary with the performance results.
-        """       
-        loss = self.loss_list[-1] if only_last else self.loss_list
-        results_dict = {"loss": loss}
-        return results_dict
-
-
-    def copy(self): # FIXME: Add return type `typing.Self`` in python 3.11
-        """Create a shallow copy of the current instance (the evaluation
-        history is not copied).
-
-        Returns:
-            BasicEvaluation: A new evaluation instance with the same configuration.
-        """ 
-        return self(loss_criterion=self.loss_criterion)
     
 
 
@@ -72,20 +48,14 @@ class AccuracyEvaluation(BasicEvaluation):
         self.accuracy_list = []
 
 
-    def __call__(self, outputs: torch.Tensor, labels: torch.Tensor) -> float:
+    def __call__(self, outputs: torch.Tensor, labels: torch.Tensor, results: EvaluationResults) -> torch.Tensor:
         with torch.no_grad():
             _, predicted = torch.max(outputs.data, dim=1)  # Get predicted class
             total = labels.size(0)
             correct = (predicted == labels).sum().item()  # Compare with ground-truth
             accuracy = 100 * correct / total
-            self.accuracy_list.append(accuracy)
+            results._add_result('accuracy', accuracy)
 
-        return super().__call__(outputs, labels)
+        return super().__call__(outputs, labels, results)
     
-
-    def get_results(self, only_last: bool = False) -> Dict[str, float]:
-        results_dict = super().get_results(only_last)
-        accuracy = self.accuracy_list[-1] if only_last else self.accuracy_list
-        results_dict['accuracy'] = accuracy
-        return results_dict
     
