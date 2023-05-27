@@ -63,6 +63,8 @@ It is true that there are some small differences between the different batch siz
 
 #### Optimizers
 
+
+
 #### Transformations
 
 Pytorch, under the `torchvisions.transforms` module offers the possibility to apply transofrmations to the input images. We thought that it would be interesting to see how the training images look before deciding which transofrmations to apply.
@@ -73,11 +75,17 @@ As we can see, most of the images contain more than one digit. The one correspon
 
 <img src="Results/fig5.png" style="zoom:15%;" ></img>
 
-We did not expect these transformations to have much of an impact. Even so, we thought that the performance could be improved if rotating and changing the colors of the images happened to help the model to gerenalize better.
+We did not expect these transformations to have much of an impact. Even though, we thought that the performance could be improved if rotating and changing the colors of the images happened to help the model to gerenalize better.
+
+The results were not very promising, as the same network with the same architecture and same hyperparameters managed to achieve an accuracy of the $81.67\%$ for the testing dataset. Not only the accuracy reduced, but the overall training time increased as a transformation had to be applied to every image.
 
 #### Training the model with the extended SVHN dataset
 
+All the experiments so far have been done with the regular training and testing dataset. The training dataset conists of 73257 digits and the testing dataset consists of 26032 of them. However, we realized that in the official SVHN [website](http://ufldl.stanford.edu/housenumbers/), an extended dataset with 531131 additional samples (less difficult to classify) was provided. Therefore, we thought that it could be a very good approach to feed the network with more and easier images during training.
 
+<img src="Results/fig7.png" style="zoom:25%"></img>
+
+As we can see, both the training accuracy and the loss improved with more data. However, the final test accuracy of the model was significantly lower, a $77.31\%$. We believe that this is because the training dataset contains more simpler images than the testing dataset. Thus, it is difficult for the network to generalize the knowledge acquired during training.
 
 #### Changes in the architecture
 
