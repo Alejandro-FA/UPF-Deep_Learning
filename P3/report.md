@@ -1,3 +1,4 @@
+
 # Deep Learning Practice 3 report document
 
 *Predicting house numbers with CNNs and the SVHN dataset*

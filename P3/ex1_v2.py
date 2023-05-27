@@ -7,6 +7,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 import MyTorchWrapper as mtw
 import time
+import numpy as np
 
 # from google.colab import drive
 # # Mount Google Drive
@@ -15,7 +16,7 @@ import time
 
 data_path = 'P3/Data/'
 results_path = 'P3/Results/'
-run_train = True # Whether to train a model or not
+run_train = True # Whether to train a model or not
 run_test = True # Whether to test a model or not
 device = mtw.get_torch_device(use_gpu=True, debug=True)
 seed_value = 10
@@ -82,62 +83,86 @@ class SVHN(torch.utils.data.Dataset):
 
 class ConvNet(nn.Module):
     def __init__(self, num_classes=10):
+        
         super(ConvNet, self).__init__()
-        # Formula: output size = 1 + (n + 2p - f) / s
-        
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=0)
-        self.batch_norm1 = nn.BatchNorm2d(32)
-        self.pool1 = nn.MaxPool2d(kernel_size=15, stride=1)
-        # input: 3x32x32, output: 32x16x16
-        
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=0)
-        self.batch_norm2 = nn.BatchNorm2d(64)
-        self.pool2 = nn.MaxPool2d(kernel_size=7, stride=1)
-        # input: 32x16x16, output: 64x8x8
-        
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=0)
-        self.batch_norm3 = nn.BatchNorm2d(128)
-        self.pool3 = nn.MaxPool2d(kernel_size=3, stride=1)
-        # input: 64x8x8, output: 128x4x4
 
-        self.conv_2ndlast = nn.Conv2d(128, 512, kernel_size=1, stride=1, padding=0)
-        self.avgpool = nn.AvgPool2d(kernel_size=4, stride=1)
-        # input: 128x4x4, output: 512x1x1
-        
-        self.conv_last = nn.Conv2d(512, num_classes, kernel_size=1, stride=1, padding=0)
-        # input: 512x1x1, output: num_classes x 1x1
+        ## Inception
+        self.conv11 = nn.Conv2d(3, 16, kernel_size=1, stride=1, padding=0)
+        self.conv12 = nn.Sequential(
+            nn.Conv2d(3, 3, kernel_size=3, stride=1, padding=1, groups=3),
+            nn.Conv2d(3, 16, kernel_size=1, stride=1, padding=0)
+        )
+        self.conv13 = nn.Sequential(
+            nn.Conv2d(3, 3, kernel_size=5, stride=1, padding=2, groups=3),
+            nn.Conv2d(3, 16, kernel_size=1, stride=1, padding=0)
+        )
+        self.conv14 = nn.Sequential(
+            nn.Conv2d(3, 3, kernel_size=7, stride=1, padding=3, groups=3),
+            nn.Conv2d(3, 16, kernel_size=1, stride=1, padding=0)
+        )
+        self.norm1 = nn.BatchNorm2d(16)
+                
+        ## VGG 
+        self.conv31 = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=5, stride=1, padding=2, groups=64),
+            nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0)
+        )
+        self.conv32 = nn.Sequential(
+            nn.Conv2d(128, 128, kernel_size=7, stride=1, padding=3, groups=128),
+            nn.Conv2d(128, 128, kernel_size=1, stride=1, padding=0)
+        )
+        self.norm2 = nn.BatchNorm2d(128)
 
-        self.relu = nn.ReLU()
+
+        self.conv41 = nn.Sequential(
+            nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2, groups=128),
+            nn.Conv2d(128, 196, kernel_size=1, stride=1, padding=0)
+        )
+        self.conv42 = nn.Sequential(
+            nn.Conv2d(196, 196, kernel_size=5, stride=1, padding=2, groups=196),
+            nn.Conv2d(196, 196, kernel_size=1, stride=1, padding=0)
+        )
+        self.norm3 = nn.BatchNorm2d(256)
+        
+        self.dropout2d = nn.Dropout2d(p=0.05)
+        self.dropout = nn.Dropout(p=0.05)
+        self.fc = nn.Linear(1764, num_classes, bias=True)
         
         
+        self.maxpool= nn.MaxPool2d(kernel_size=3, stride=2)
+        self.relu = nn.LeakyReLU(0.1)
+
     def forward(self, x):
-        out = self.conv1(x)
-        out = self.batch_norm1(out)
-        out = self.pool1(out)
-        out = self.relu(out)
         
-        out = self.conv2(out)
-        out = self.batch_norm2(out)
-        out = self.pool2(out)
-        out = self.relu(out)
+        ## Inception
+        #Inc 1 
+        out1 = self.relu(self.conv11(x))
+        out2 = self.relu(self.conv12(x))
+        out3 = self.relu(self.conv13(x))
+        out4 = self.relu(self.conv14(x))
+        out = torch.cat([out1, out2, out3, out4],dim=1)
         
-        out = self.conv3(out)
-        out = self.batch_norm3(out)
-        out = self.pool3(out)
+        out = self.maxpool(out)
+        out = self.dropout2d(out)
+
+        # VGG
+        out = self.relu(self.conv31(out))
+        out = self.relu(self.conv32(out)+out)
+        out = self.maxpool(out)
+        out = self.dropout2d(out)
+
+        out = self.relu(self.conv41(out))
+        out = self.relu(self.conv42(out)+out)
+        out = self.maxpool(out)
+        
+        #print(out.shape)
+        out = out.view(out.size(0), -1)
+        out = self.dropout(out)
+        out = self.fc(out)
         out = self.relu(out)
-
-        out = self.conv_2ndlast(out)
-        out = self.avgpool(out)
-        out = self.relu(out)
-
-        out = self.conv_last(out)
-
-        out = out.reshape(out.size(0), -1)
-        # # print(out.shape)
-        # out = out.reshape(out.size(0), -1) #128,32,8,8 -> 128,8*8*32
-        # out = self.fc(out) # TODO:  we don't need sigmoid or other activation function at the end beacuse we will use nn.CrossEntropyLoss() (check documentation to understand why)
         
         return out
+
 
 
 """
@@ -150,11 +175,11 @@ tr = transforms.Compose([
         transforms.Normalize(mean = [.5], std = [.5])
         ])
 
-SVHNTrain = SVHN(data_path+'/svhn/train_32x32.mat', tr)
+SVHNTrain = SVHN(data_path+'/svhn/extra_32x32.mat', tr)
 SVHNTest = SVHN(data_path+'/svhn/test_32x32.mat', tr)
 
 train_loader = torch.utils.data.DataLoader(dataset=SVHNTrain, batch_size=256, shuffle=True, pin_memory=True)
-test_loader = torch.utils.data.DataLoader(dataset=SVHNTest, batch_size=len(SVHNTest), pin_memory=True)
+test_loader = torch.utils.data.DataLoader(dataset=SVHNTest, batch_size=256, pin_memory=True)
 
 
 """
@@ -163,14 +188,16 @@ Define hyperparameters
 CNN = ConvNet()
 # optimizer = torch.optim.SGD(CNN.parameters(),lr = .001, weight_decay=1e-5, momentum=0.9)
 epochs = 5
-optimizer = torch.optim.Adam(CNN.parameters(), lr = .001)
+learning_rate = .1
+optimizer = torch.optim.SGD(CNN.parameters(),lr = learning_rate, 
+                            weight_decay=1e-5, momentum=0.9)
 evaluation = mtw.AccuracyEvaluation(loss_criterion=nn.CrossEntropyLoss()) # Cross entropy loss for classification problems
 
 
 """
 Train the model
 """
-if run_train: # Train the model
+if run_train: # Train the model
     start_time = time.time()
 
     trainer = mtw.Trainer(CNN, evaluation=evaluation, epochs=epochs, optimizer=optimizer, data_loader=train_loader, device=device)
@@ -206,14 +233,22 @@ if run_test:
     iomanager.load(model=CNN, model_id=model_id)
     tester = mtw.Tester(model=CNN, evaluation=evaluation, data_loader=test_loader, device=device)
     test_results = tester.test()
-    print(f'Test Accuracy of the model on the {len(SVHNTest)} test images: {test_results.accuracy} %')
+    accuracy = np.average(test_results.accuracy)
+    print(f'Test Accuracy of the model on the {len(SVHNTest)} test images: {accuracy} %')
 
     if run_train:
-        # Save a model summary
+        # Save a model summary
         summary = mtw.training_summary(trainer, test_results)
         iomanager.save_summary(summary_content=summary, model_id=model_id)
 
+# Compute model paramters
+def compute_model_params(model):
+  params = 0
+  for p in model.parameters():
+    params+= p.numel()
+  return params
 
+print(compute_model_params(CNN))
 
 
 # """# Ex. 2
