@@ -49,5 +49,12 @@ torch.save(CNN.state_dict(), results_path+'/model.ckpt')
 CNN.load_state_dict(torch.load(results_path+'/model.ckpt'))
 ```
 
+# Suggestions
+
+1. Inception / Resnet. Output passar-lo a maxpooling
+2. Després utilitzar VGG, amb depthwise separable convolutions
+
+Podem utilitzar més dades d'input, i transfer learning també.
+
 
 
