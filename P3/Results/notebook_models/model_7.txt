@@ -1,4 +1,4 @@
-Test results: {'loss': 2.3073712349231066, 'accuracy': 9.111862323294407}
+Test results: {'loss': 0.46272486294422255, 'accuracy': 86.93531038721574}
 Loss function used: CrossEntropyLoss()
 Epochs: 5
 Optimizer: Adam (
