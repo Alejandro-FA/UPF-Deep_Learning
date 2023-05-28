@@ -86,13 +86,63 @@ All the experiments so far have been done with the regular training and testing 
 
 <img src="Results/fig7.png" style="zoom:25%"></img>
 
-As we can see, both the training accuracy and the loss improved with more data. However, the final test accuracy of the model was significantly lower, a $77.31\%$. We believe that this is because the training dataset contains more simpler images than the testing dataset. Thus, it is difficult for the network to generalize the knowledge acquired during training.
+DISCUTIR QUE FER AMB AQUESTS RESULTATS: <span style="color:red">**As we can see, both the training accuracy and the loss improved with more data. However, the final test accuracy of the model was significantly lower, a $77.31\%$. We believe that this is because the training dataset contains more simpler images than the testing dataset. Thus, it is difficult for the network to generalize the knowledge acquired during training.**</span>
 
 #### Changes in the architecture
 
 As we have seen, tweaking the hyperparameters on our pursuit to improve the classification performance of our model resulted in marginal enhancements. Therefore, at this point we believed that the best way to improve the performance of the SVHN classification problem required to change the architecture of the network. In this section of the report we will explain the ones that yielded to the best results.
 
 <span style="color:red">ARCHITECTURES THAT WE TESTED, NUMBER OF PARAMETERS, TESTING DATASET ACCURACY</span>
+
+# Exercise 2
+
+### Introduction
+
+As we have seen at the end of exercise 1, modifying the architecture by adding more layers can rapidly increase the number of parameters of the model. In this exercise, we were forced to build a model that could perform accurately on the same problem as before, classifying the street-view housing numbers. With the **only** two restrictions that:
+
+1. We could not change the hyperparameters that we were given.
+2. We had a restriction on the number of parameters that the model could have. They could not exceed the number of **150K**.
+
+As a reference, we were told that a decent testing accuracy of a $93\%$ could be achieved. To be able to succeed on this task, we took inspiration on some well-known CNN architectures: [MobileNetV2](https://arxiv.org/pdf/1801.04381.pdf), [InceptionNet](https://arxiv.org/pdf/1409.4842v1.pdf ) and the [VGGNet](https://arxiv.org/pdf/1409.1556.pdf).
+
+MobileNetV2 is a popular CNN architecture specifically designed for efficient and lightweight image classification tasks on mobile and embedded devices. One of the characteristics of this network is the usage of **Depthwise Separable Convolutions** in order to reduce the number of parameters of a convolutional layer. These types of convolutions perform the regular convolution operation in two steps:
+
+1. *Depth-wise convolution*: captures spatial information independently for each input channel.
+2. *Point-wise convolution*: applied after the depth-wise convolution, it performs a linear combination of the channels.
+
+Using depthwise separable convolutions allows to drastically reduce the number of parameters of the model, without affecting its accuracy very much. For this reason, we decided that this was a must for our model.
+
+One of the main characteristics of the InceptionNet is to apply filters of different sizes at the same level, with the objective to reduce up to some point the computational complexity of building deep neural networks. Given the advantages that this produces, we thought that it could be useful for our lightweight model.
+
+The last popular network that we thought that could be useful is VGG, which is a standard **deep** CNN with many layers. The power of concatenating many different convolutional layers has been shown to result in a very promising performance, at the cost of increasing the number of parameters.
+
+Having considered some of the state of the art architectures, we built the following model:
+
+### Architecture
+
+<span style="color:red">IMATGE, DIAGRAMA O DIBUIX ON ES PUGUI VEURE L'ARQUITECTURA DEL MODEL</span>
+
+<span style="color:red">COMENTAR DROPOUT</span>
+
+As the contrary was not mentioned, and the only restrictions imposed were the two ones previously mentioned, we decided to train our model with the extended dataset that we have already described in this document.
+
+### Results
+
+The following table inteds to summarize all the different parameters and their different values that were used during training.
+
+| Parameter     | Value                  |
+| ------------- | ---------------------- |
+| Batch size    | $256$                  |
+| Epochs        | $5$                    |
+| Learning rate | $0.1$                  |
+| Optimizer     | $\text{SGD}$           |
+| Weight decay  | $1\cdot 10^{-5}$       |
+| Momentum      | $0.9$                  |
+| Loss function | $\text{Cross Entropy}$ |
+
+<span style="color:red">COMENTAR RESULTATS. MAYBE ALGUNA GRÀFICA?</span>
+
+# Exercise 3
 
 
 
