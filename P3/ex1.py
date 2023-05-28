@@ -197,8 +197,8 @@ Train the model
 if run_train: # Train the model
     print(f"Training model {model_id} with {len(SVHNTrain)} images...")
 
-    trainer = mtw.Trainer(CNN, evaluation=evaluation, epochs=epochs, optimizer=optimizer, data_loader=train_loader, device=device)
-    train_results = trainer.train()
+    trainer = mtw.Trainer(evaluation=evaluation, epochs=epochs, data_loader=train_loader, device=device)
+    train_results = trainer.train(CNN, optimizer)
     train_losses = train_results['loss']
     train_accuracies = train_results['accuracy']
     
@@ -227,13 +227,13 @@ Test the model
 """
 if run_test:
     iomanager.load(model=CNN, model_id=model_id)
-    tester = mtw.Tester(model=CNN, evaluation=evaluation, data_loader=test_loader, device=device)
-    test_results = tester.test()
+    tester = mtw.Tester(evaluation=evaluation, data_loader=test_loader, device=device)
+    test_results = tester.test(CNN)
     print(f'Test Accuracy of the model on the {len(SVHNTest)} test images: {test_results["accuracy"]} %')
 
     if run_train:
         # Save a model summary
-        summary = mtw.training_summary(trainer, test_results)
+        summary = mtw.training_summary(CNN, optimizer, trainer, test_results)
         iomanager.save_summary(summary_content=summary, model_id=model_id)
 
     # Compute model paramters

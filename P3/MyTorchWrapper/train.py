@@ -10,42 +10,43 @@ class Trainer:
 
     def __init__(
         self,
-        model: nn.Module,
         evaluation: BasicEvaluation,
         epochs: int,
-        optimizer: torch.optim.Optimizer,
         data_loader: DataLoader,
         device: torch.device,
     ) -> None:
         """
         Args:
-            model (nn.Module): model to train
             evaluation (BasicEvaluation): evaluation instance with the desired
             methods of evaluation, including the loss. See the BasicEvaluation
             class for more details.
             epochs (int): number of training epochs
-            optimizer (torch.optim.Optimizer): optimization algorithm to use
             data_loader (DataLoader): Data with which to train the torch model
             device (torch.device): device in which to perform the computations
         """
-        self.model = model
         self.evaluation = evaluation
         self.epochs = epochs
-        self.optimizer = optimizer
         self.data_loader = data_loader
         self.device = device
 
 
-    def train(self, seed_value: Optional[int] = 10) -> Dict[str, List[float]]:
+    def train(self, model: nn.Module, optimizer: torch.optim.Optimizer, seed_value: Optional[int] = 10, verbose: bool = True) -> Dict[str, List[float]]:
         """Train the torch model with the training data provided.
+
+        Args:
+            model (nn.Module): the model to train
+            optimizer (torch.optim.Optimizer): optimization algorithm to use
+            seed_value (int | None, optional): Set a manual random seed to get consistent results.
+            If it is None, then no manual seed is set. Defaults to 10.
+            verbose (bool, optional): Whether to print training progress or not. Defaults to True.
 
         Returns:
             Dict[str, List[float]]: Performance evaluation of the training
             process at each step.
         """
         if seed_value is not None: torch.manual_seed(seed_value) # Ensure repeatable results
-        self.model.train() # Set the model in training mode
-        self.model.to(self.device)
+        model.train() # Set the model in training mode
+        model.to(self.device)
 
         total_steps = len(self.data_loader)
         feedback_step = round(total_steps / 3) + 1
@@ -58,15 +59,15 @@ class Trainer:
                 features = features.to(self.device)
                 labels = labels.to(self.device)
 
-                outputs = self.model(features)  # Forward pass
+                outputs = model(features)  # Forward pass
                 loss = self.evaluation(outputs, labels, results)  # Evaluation
 
                 # Backward and optimize
-                self.optimizer.zero_grad()
+                optimizer.zero_grad()
                 loss.backward()
-                self.optimizer.step()
+                optimizer.step()
 
-                if (i + 1) % feedback_step == 0 or i + 1 == total_steps:
+                if verbose and ((i + 1) % feedback_step == 0 or i + 1 == total_steps):
                     print(
                         "Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}".format(
                             epoch + 1, self.epochs, i + 1, total_steps, loss.item()
