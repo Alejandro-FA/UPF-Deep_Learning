@@ -2,10 +2,10 @@ import torch
 from torch import nn
 import torchinfo
 from .train import Trainer
-from .evaluation_results import EvaluationResults
+from typing import Dict, List
 
 
-def training_summary(trainer: Trainer, test_results: EvaluationResults) -> str:    
+def training_summary(trainer: Trainer, test_results: Dict[str, float | List[str]]) -> str:    
     """Build a performance summary report for future reference.
 
     Args:

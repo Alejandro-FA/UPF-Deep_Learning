@@ -2,7 +2,6 @@ import re
 import os
 import torch
 from torch import nn
-from typing import Optional
 
 
 class _PathManager:

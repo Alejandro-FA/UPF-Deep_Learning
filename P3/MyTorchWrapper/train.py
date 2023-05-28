@@ -2,14 +2,11 @@ import torch
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from .evaluation import BasicEvaluation
-from .evaluation_results import EvaluationResults
+from typing import Dict, List, Optional
 
 
 class Trainer:
     """Class to train a Neural Network model."""
-
-    seed_value = 10
-
 
     def __init__(
         self,
@@ -39,20 +36,20 @@ class Trainer:
         self.device = device
 
 
-    def train(self) -> EvaluationResults:
+    def train(self, seed_value: Optional[int] = 10) -> Dict[str, List[float]]:
         """Train the torch model with the training data provided.
 
         Returns:
-            EvaluationResults: Performance evaluation of the training process
-            at each step.
+            Dict[str, List[float]]: Performance evaluation of the training
+            process at each step.
         """
-        torch.manual_seed(Trainer.seed_value)  # Ensure repeatable results
+        if seed_value is not None: torch.manual_seed(seed_value) # Ensure repeatable results
+        self.model.train() # Set the model in training mode
         self.model.to(self.device)
-        self.model.train()  # Set the model in training mode
 
         total_steps = len(self.data_loader)
         feedback_step = round(total_steps / 3) + 1
-        results = EvaluationResults()
+        results = self.evaluation.create_results()
 
         for epoch in range(self.epochs):
             # Iterate over all batches of the dataset
@@ -76,4 +73,4 @@ class Trainer:
                         )
                     )
 
-        return results
+        return results.as_dict(averaged=False)

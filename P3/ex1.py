@@ -6,8 +6,6 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 import MyTorchWrapper as mtw
-import time
-import numpy as np
 
 # from google.colab import drive
 # # Mount Google Drive
@@ -19,8 +17,7 @@ results_path = 'P3/Results/'
 run_train = True # Whether to train a model or not
 run_test = True # Whether to test a model or not
 device = mtw.get_torch_device(use_gpu=True, debug=True)
-seed_value = 10
-torch.manual_seed(seed_value)
+torch.manual_seed(10)
 
 """
 Instantiate IOManager to handle IO operations
@@ -175,7 +172,7 @@ tr = transforms.Compose([
         transforms.Normalize(mean = [.5], std = [.5])
         ])
 
-SVHNTrain = SVHN(data_path+'/svhn/extra_32x32.mat', tr)
+SVHNTrain = SVHN(data_path+'/svhn/train_32x32.mat', tr)
 SVHNTest = SVHN(data_path+'/svhn/test_32x32.mat', tr)
 
 train_loader = torch.utils.data.DataLoader(dataset=SVHNTrain, batch_size=256, shuffle=True, pin_memory=True)
@@ -201,10 +198,9 @@ if run_train: # Train the model
     print(f"Training model {model_id} with {len(SVHNTrain)} images...")
 
     trainer = mtw.Trainer(CNN, evaluation=evaluation, epochs=epochs, optimizer=optimizer, data_loader=train_loader, device=device)
-    trainer.seed_value = seed_value
     train_results = trainer.train()
-    train_losses = train_results.loss
-    train_accuracies = train_results.accuracy
+    train_losses = train_results['loss']
+    train_accuracies = train_results['accuracy']
     
     fig1 = plt.figure(1)
     plt.plot(train_accuracies)
@@ -232,9 +228,8 @@ Test the model
 if run_test:
     iomanager.load(model=CNN, model_id=model_id)
     tester = mtw.Tester(model=CNN, evaluation=evaluation, data_loader=test_loader, device=device)
-    test_results = tester.test().averaged()
-    accuracy = test_results.accuracy
-    print(f'Test Accuracy of the model on the {len(SVHNTest)} test images: {accuracy} %')
+    test_results = tester.test()
+    print(f'Test Accuracy of the model on the {len(SVHNTest)} test images: {test_results["accuracy"]} %')
 
     if run_train:
         # Save a model summary

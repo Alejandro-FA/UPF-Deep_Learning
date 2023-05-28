@@ -2,9 +2,7 @@ import torch
 from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from .evaluation import BasicEvaluation
-from .evaluation_results import EvaluationResults
-from .train import Trainer
-
+from typing import Dict
 
 class Tester:
     """Class to evaluate the performance of a trained model."""
@@ -31,15 +29,15 @@ class Tester:
         self.device = device
 
 
-    def test(self) -> EvaluationResults:
+    def test(self) -> Dict[str, float]:
         """Test the performance of a model with a given dataset.
 
         Returns:
-            EvaluationResults: Performance results.
+            Dict[str, float]: Aggregated performance results.
         """
-        self.model.to(self.device)
         self.model.eval()
-        results = EvaluationResults()
+        self.model.to(self.device)
+        results = self.evaluation.create_results()
 
         with torch.no_grad():
             for features, labels in self.data_loader:
@@ -53,4 +51,4 @@ class Tester:
                 # Evaluate performance of the model
                 self.evaluation(outputs, labels, results)
 
-        return results
+        return results.as_dict(averaged=True)
