@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Dict
+from typing import List, Dict, Union
 
 
 class BasicResults:
@@ -41,7 +41,7 @@ class BasicResults:
         return a / b
     
 
-    def as_dict(self, averaged=True) -> Dict[str, float | List[float]]:
+    def as_dict(self, averaged=True) -> Dict[str, Union[float, List[float]]]:
         """Create a dictionary representation of all the results.
 
         Args:
@@ -76,7 +76,7 @@ class AccuracyResults(BasicResults):
         return a / b
     
 
-    def as_dict(self, averaged=True) -> Dict[str, float | List[float]]:
+    def as_dict(self, averaged=True) -> Dict[str, Union[float, List[float]]]:
         dict = super().as_dict(averaged)
         dict['accuracy'] = self.accuracy_avg if averaged else self.accuracy
         return dict
