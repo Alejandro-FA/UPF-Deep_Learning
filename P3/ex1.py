@@ -239,7 +239,8 @@ if run_test:
     # Compute model paramters
     print("Number of parameters of the model:", mtw.get_model_params(CNN))
 
-
+dummy_input = torch.rand(256, 3, 32, 32)
+torch.onnx.export(CNN, dummy_input, f"{results_path}/ex2.onnx")
 # """# Ex. 2
 
 # # **Building your own efficient Convolutional Network architecture for SVHN**

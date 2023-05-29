@@ -51,10 +51,7 @@ CNN.load_state_dict(torch.load(results_path+'/model.ckpt'))
 
 # Suggestions
 
-1. Inception / Resnet. Output passar-lo a maxpooling
-2. Després utilitzar VGG, amb depthwise separable convolutions
-
-Podem utilitzar més dades d'input, i transfer learning també.
-
-
-
+1. Increase dropout to 0.2
+2. Use batch normalization together with dropout
+3. Try to lower the filters size to 3 instead of 5 + Another FC Layer
+4. Try to add another inception layer.

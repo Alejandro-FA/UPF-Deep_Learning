@@ -1,4 +1,3 @@
-
 # Deep Learning Practice 3 report document
 
 *Predicting house numbers with CNNs and the SVHN dataset*
@@ -64,7 +63,7 @@ It is true that there are some small differences between the different batch siz
 
 #### Optimizers
 
-
+We tested SGD and Adam. Depending on the hyperparameters used, SGD behaved quite poorly while Adam did not suffer that much the modifications. Furthermore, we were not able to find any learning rate that improved the results significantly. Therefore, we decided to continue with Adam since it gave us beter results overall.
 
 #### Transformations
 
@@ -86,29 +85,35 @@ All the experiments so far have been done with the regular training and testing 
 
 <img src="Results/fig7.png" style="zoom:25%"></img>
 
-DISCUTIR QUE FER AMB AQUESTS RESULTATS: <span style="color:red">**As we can see, both the training accuracy and the loss improved with more data. However, the final test accuracy of the model was significantly lower, a $77.31\%$. We believe that this is because the training dataset contains more simpler images than the testing dataset. Thus, it is difficult for the network to generalize the knowledge acquired during training.**</span>
+As we can see, both the training accuracy and the loss improved with more data. This had an impact on the final testing accuracy as well. Using the exended dataset, the network obtained an $88\%$ accuracy on the testing dataset.
 
 #### Changes in the architecture
 
-As we have seen, tweaking the hyperparameters on our pursuit to improve the classification performance of our model resulted in marginal enhancements. Therefore, at this point we believed that the best way to improve the performance of the SVHN classification problem required to change the architecture of the network. In this section of the report we will explain the ones that yielded to the best results.
-
-<span style="color:red">ARCHITECTURES THAT WE TESTED, NUMBER OF PARAMETERS, TESTING DATASET ACCURACY</span>
+As we have seen, tweaking the hyperparameters on our pursuit to improve the classification performance of our model resulted in marginal enhancements. Therefore, at this point we believed that the best way to improve the performance of the SVHN classification problem required to change the architecture of the network. Since this was the task of exercise 2, we decided to move on and focus our efforts in exercise 2.
 
 # Exercise 2
 
-### Introduction
+## Introduction
 
-As we have seen at the end of exercise 1, modifying the architecture by adding more layers can rapidly increase the number of parameters of the model. In this exercise, we were forced to build a model that could perform accurately on the same problem as before, classifying the street-view housing numbers. With the **only** two restrictions that:
+In this exercise, we were forced to build a model that could perform accurately on the same problem as before, classifying the street-view housing numbers. With the **only** two restrictions that:
 
 1. We could not change the hyperparameters that we were given.
 2. We had a restriction on the number of parameters that the model could have. They could not exceed the number of **150K**.
 
-As a reference, we were told that a decent testing accuracy of a $93\%$ could be achieved. To be able to succeed on this task, we took inspiration on some well-known CNN architectures: [MobileNetV2](https://arxiv.org/pdf/1801.04381.pdf), [InceptionNet](https://arxiv.org/pdf/1409.4842v1.pdf ) and the [VGGNet](https://arxiv.org/pdf/1409.1556.pdf).
+As a reference, we were told that a decent testing accuracy of a $93\%$ could be achieved.
+
+First of all we started by modifying the provided models in the examples by changing kernel sizes and adding or removing some layers. After trying with different architectures we were not getting the desired results. Therefore, we decided to combine two already existing architectures, Inception and VGG. 
+
+The first step was to, using the provided models, combine both architectures so that the output size of Inception matched VGG input. The results after the first executions were not significantly better while the number of parameters increased a lot. At this point we had already been working in this problem for many hours. So, we decided to get more inspiration by already existing models.
+
+## Desinging the final model
+
+As we have seen previously, it seemed that adding more layers was mandatory in order to get a better result. This rapidly increases the number of parameters of the model. Therefore, to be able to succeed on this task, we took inspiration on some well-known CNN architectures suggested in class: [MobileNetV2](https://arxiv.org/pdf/1801.04381.pdf), [InceptionNet](https://arxiv.org/pdf/1409.4842v1.pdf ) and the [VGGNet](https://arxiv.org/pdf/1409.1556.pdf).
 
 MobileNetV2 is a popular CNN architecture specifically designed for efficient and lightweight image classification tasks on mobile and embedded devices. One of the characteristics of this network is the usage of **Depthwise Separable Convolutions** in order to reduce the number of parameters of a convolutional layer. These types of convolutions perform the regular convolution operation in two steps:
 
-1. *Depth-wise convolution*: captures spatial information independently for each input channel.
-2. *Point-wise convolution*: applied after the depth-wise convolution, it performs a linear combination of the channels.
+1. **Depth-wise convolution**: captures spatial information independently for each input channel.
+2. **Point-wise convolution**: applied after the depth-wise convolution, it performs a linear combination of the channels.
 
 Using depthwise separable convolutions allows to drastically reduce the number of parameters of the model, without affecting its accuracy very much. For this reason, we decided that this was a must for our model.
 
@@ -118,15 +123,20 @@ The last popular network that we thought that could be useful is VGG, which is a
 
 Having considered some of the state of the art architectures, we built the following model:
 
-### Architecture
+## Final model architecture
 
 <span style="color:red">IMATGE, DIAGRAMA O DIBUIX ON ES PUGUI VEURE L'ARQUITECTURA DEL MODEL</span>
 
-<span style="color:red">COMENTAR DROPOUT</span>
+<img src="Results/ex2.onnx_vertical.png" style="zoom:25%"></img>
 
 As the contrary was not mentioned, and the only restrictions imposed were the two ones previously mentioned, we decided to train our model with the extended dataset that we have already described in this document.
 
-### Results
+### Droput
+
+When we first tried to use the extended dataset with the baseline model (the one used in exercise 1), we saw overfitting problems. Therefore, we decided to implement dropout and batch normalization, which improved the results significantly.
+
+
+## Results
 
 The following table inteds to summarize all the different parameters and their different values that were used during training.
 
