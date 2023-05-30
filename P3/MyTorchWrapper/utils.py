@@ -2,14 +2,14 @@ import torch
 from torch import nn
 import torchinfo
 from .train import Trainer
-from typing import Dict, List
+from typing import Dict, List, Union
 
 
 def training_summary(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
     trainer: Trainer,
-    test_results: Dict[str, float | List[str]],
+    test_results: Dict[str, Union[float, List[str]]],
 ) -> str:  
     """Build a performance summary report for future reference.
 

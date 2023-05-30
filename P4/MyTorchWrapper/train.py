@@ -57,7 +57,7 @@ class Trainer:
             for i, (features, labels) in enumerate(self.data_loader):
                 # Move the data to the torch device
                 features = features.to(self.device)
-                labels = labels.to(self.device)
+                labels = labels.to(self.device) # FIXME: Perhaps we need to use .to(self.device, dtype=torch.long)
 
                 outputs = model(features)  # Forward pass
                 loss = self.evaluation(outputs, labels, results)  # Evaluation
