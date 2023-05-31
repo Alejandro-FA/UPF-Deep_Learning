@@ -11,6 +11,8 @@ Andreu Garcies (240618), Alejandro Fernández (242349), Marc Aguilar (242192)
 > ```bash
 > python -m pip install --upgrade -r requirements.txt
 > ```
+>
+> In order to better organize our code, we have designed a small set of auxiliary classes and functions that encapsulate some of the most repetitive tasks in a typical PyTorch workflow. This custom library (`MyTorchWrapper`) is appended with the rest of the code.
 
 # Exercise 1
 
