@@ -179,6 +179,8 @@ The following table inteds to summarize all the different parameters and their d
 
 <span style="color:red">COMENTAR RESULTATS. MAYBE ALGUNA GRÀFICA?</span>
 
+<img src="Results/fig8.png" style="zoom:25%"></img>
+
 # Exercise 3
 
 In the exercise we first trained the architecture of the previous exercise but with data that only contained numbers from 1 to 8.
