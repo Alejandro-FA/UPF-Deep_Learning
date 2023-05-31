@@ -183,7 +183,34 @@ The following table inteds to summarize all the different parameters and their d
 
 # Exercise 3
 
-In the exercise we first trained the architecture of the previous exercise but with data that only contained numbers from 1 to 8.
+## Training base model
+
+First of all we trained the base model with data that contained numbers from 1 to 8. We used the parameters that were provided in the example code but we reduced the number of epochs to 10. 
+
+| Parameter     | Value                  |
+| ------------- | ---------------------- |
+| Batch size    | $256$                  |
+| Epochs        | $10$                    |
+| Learning rate | $0.1$                  |
+| Optimizer     | $\text{SGD}$           |
+| Weight decay  | $1\cdot 10^{-5}$       |
+| Momentum      | $0.9$                  |
+| Loss function | $\text{Cross Entropy}$ |
+
+## Fine-tuning the last FC layer
+
+Our first attempt was to fine tune only the last fully connected layer, modifying its output size to 2 so that only 0s and 9s were classified. During the fine tuning we increased the **number of epochs to 20** but we kept all the previously mentioned parameters. Since we got only 200 training samples we considered that increasing the number of epochs would benefit the model. 
+
+The results were pretty good since we got a 94.4 % of accuracy on the test dataset of 0s and 9s.
+
+## Fine-tuning more than one layer
+
+After the good results of fine-tuning only the last layer, we thought of keeping that fine-tuning too apart from doing it with more layers.
+
+We tried to fine-tune a different amount of layers of the model, but the more layers we fine-tuned the worse the performance was. We considered that our actual model was already doing a good task at creating embeddings of the input images. The low-level features were captured good enough, that was the reason why our model performed so well by only finetuning the last fully connected layer. 
+
+We started finetuning from the output layers of our model to the input ones. After trying with different selection of layers we did not get better results than by just fine-tuning the last fully connected layer. The maximum accuracy we reached was 93.10 %. 
+
 
 
 
