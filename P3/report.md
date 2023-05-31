@@ -81,11 +81,13 @@ The results were not very promising, as the same network with the same architect
 
 #### Training the model with the extended SVHN dataset
 
-All the experiments so far have been done with the regular training and testing dataset. The training dataset conists of 73257 digits and the testing dataset consists of 26032 of them. However, we realized that in the official SVHN [website](http://ufldl.stanford.edu/housenumbers/), an extended dataset with 531131 additional samples (less difficult to classify) was provided. Therefore, we thought that it could be a very good approach to feed the network with more and easier images during training.
+All the experiments so far have been done with the regular training and testing dataset. The training dataset conists of 73257 digits and the testing dataset consists of 26032 of them. However, we realized that in the official SVHN [website](http://ufldl.stanford.edu/housenumbers/), an extended dataset with 531131 additional samples was provided.
+
+So after a while of not arriving to good results, we thought that it was time to try the foolproof aproach of feeding the network with much more data. In the following figure we can see the results:
 
 <img src="Results/fig7.png" style="zoom:25%"></img>
 
-As we can see, both the training accuracy and the loss improved with more data. This had an impact on the final testing accuracy as well. Using the exended dataset, the network obtained an $88\%$ accuracy on the testing dataset.
+As we can see, both the training accuracy and the loss improved with more data. This had an impact on the final testing accuracy as well. Using the exended dataset, the network obtained an $88\%$ accuracy on the testing dataset. It should be noted, though, that the slim `2%` improvement does not seem worth the increase in computation time.
 
 #### Changes in the architecture
 
@@ -102,41 +104,64 @@ In this exercise, we were forced to build a model that could perform accurately 
 
 As a reference, we were told that a decent testing accuracy of a $93\%$ could be achieved.
 
-First of all we started by modifying the provided models in the examples by changing kernel sizes and adding or removing some layers. After trying with different architectures we were not getting the desired results. Therefore, we decided to combine two already existing architectures, Inception and VGG. 
+## First attempts (a failure after failure story)
 
-The first step was to, using the provided models, combine both architectures so that the output size of Inception matched VGG input. The results after the first executions were not significantly better while the number of parameters increased a lot. At this point we had already been working in this problem for many hours. So, we decided to get more inspiration by already existing models.
+First of all we started tinkering with the provided models in the examples by changing kernel sizes and adding or removing some layers. After trying dozens of different combinations we did not obtain any meaningful result. Our best result was a `90 %` accuracy with more than `150k` parameters.
+
+Now that we have a bit more of perspective, it seems that we were too focused on following the common approach of doubling the number of channels while reducing the image resolution in half. Furthermore, we did not try more than 4 layers because the number of parameters grew too rapidly.
+
+## Moving towards well-known architectures
+
+Given the poor results obtained and the amount of time lost without any meaningful improvement, we decided to put more tought into our network design. So, as suggested in class, we read over the papers of some well-known architectures: [MobileNetV2](https://arxiv.org/pdf/1801.04381.pdf), [InceptionNet](https://arxiv.org/pdf/1409.4842v1.pdf ) and the [VGGNet](https://arxiv.org/pdf/1409.1556.pdf).
+
+Our **first attempt** was to replicate the general structure of *MobileNetV2* (with a very simplified version of the bottleneck layer). Although we expected better results, we obtained a much worse result of around `60 %` of accuracy. Our immediate conclusion was that our simplifications were too extreme. Instead of putting more work into it, we decided to go back to VGG since it seemed a better starting point.
+
+Our **second attempt** was to combine two already existing architectures, **Inception** and **VGG**. We first started with the naïve approach of joining the two models (so the output size of Inception had to match the VGG input). The results after the first executions were not better (around `89%`) while the number of parameters increased a lot. At this point we had already been working in this problem for many hours. So, we decided to take a break, read more information and talk with our teacher.
+
+Once again, since we did not obtain any meaningful result during this process, we do not find interesting to provide more details about this phase.
 
 ## Desinging the final model
 
-As we have seen previously, it seemed that adding more layers was mandatory in order to get a better result. This rapidly increases the number of parameters of the model. Therefore, to be able to succeed on this task, we took inspiration on some well-known CNN architectures suggested in class: [MobileNetV2](https://arxiv.org/pdf/1801.04381.pdf), [InceptionNet](https://arxiv.org/pdf/1409.4842v1.pdf ) and the [VGGNet](https://arxiv.org/pdf/1409.1556.pdf).
+### Depthwise Separable Convolutions
 
-MobileNetV2 is a popular CNN architecture specifically designed for efficient and lightweight image classification tasks on mobile and embedded devices. One of the characteristics of this network is the usage of **Depthwise Separable Convolutions** in order to reduce the number of parameters of a convolutional layer. These types of convolutions perform the regular convolution operation in two steps:
+By the previous results, it seemed that we needed more than 4 layers to capture the necessary amount meaningful features of our images. However, we  still had the problem that adding more layers rapidly increases the number of parameters of the model. After talking with our teacher, we were told to investigate **depth-wise convolutions**, wich is a common approach but some of the famous networks previously mentioned to reduce the number of parameters of convolutional layers.
+
+Using depthwise separable convolutions allows to drastically reduce the number of parameters of the model, without affecting its accuracy very much. For this reason, it seemed like a must for our model. These types of convolutions perform the regular convolution operation in two steps:
 
 1. **Depth-wise convolution**: captures spatial information independently for each input channel.
 2. **Point-wise convolution**: applied after the depth-wise convolution, it performs a linear combination of the channels.
 
-Using depthwise separable convolutions allows to drastically reduce the number of parameters of the model, without affecting its accuracy very much. For this reason, we decided that this was a must for our model.
+An example of a well-known architecture that uses **Depthwise Separable Convolutions** is MobileNetV2, which is a popular CNN architecture specifically designed for efficient and lightweight image classification tasks on mobile and embedded devices.
+
+### InceptionNet influence
 
 One of the main characteristics of the InceptionNet is to apply filters of different sizes at the same level, with the objective to reduce up to some point the computational complexity of building deep neural networks. Given the advantages that this produces, we thought that it could be useful for our lightweight model.
 
-The last popular network that we thought that could be useful is VGG, which is a standard **deep** CNN with many layers. The power of concatenating many different convolutional layers has been shown to result in a very promising performance, at the cost of increasing the number of parameters.
+### VGG influence
 
-Having considered some of the state of the art architectures, we built the following model:
+The last popular network that we thought that could be useful is VGG, which is a standard **deep** CNN with many layers. The power of concatenating many different convolutional layers has been shown to result in a very promising performance, at the cost of increasing the number of parameters.
 
 ## Final model architecture
 
-<span style="color:red">IMATGE, DIAGRAMA O DIBUIX ON ES PUGUI VEURE L'ARQUITECTURA DEL MODEL</span>
+With all the knowledge that we had gathered up to that point, and after playing a little bit with the parameters to ensure that we were under `150k` parameters, we built the following model:
 
 <img src="Results/ex2.onnx_vertical.png" style="zoom:25%"></img>
 
-As the contrary was not mentioned, and the only restrictions imposed were the two ones previously mentioned, we decided to train our model with the extended dataset that we have already described in this document.
-
 ### Droput
 
-When we first tried to use the extended dataset with the baseline model (the one used in exercise 1), we saw overfitting problems. Therefore, we decided to implement dropout and batch normalization, which improved the results significantly.
+When we first tried to use the extended dataset with the baseline model (the one used in exercise 1), we saw overfitting problems. Therefore, we thought that implementing dropout and/or batch normalization could be an interesting addition to the model. In the end, after trying both separately, we decided to stick with dropout since it provided better results (we used `5%` of dropout).
 
+At first we just used dropout for the fully connected layer, and then we discovered that it is also possible to add dropout to convolutional layers (with the `Dropout2d` class in PyTorch). We first tried using dropout after every single convolution, but we found that we obtained better results if we only used dropout after every group of convolutional layers.
 
-## Results
+We would have liked to try higher percentages of dropout and a combination of batch normalization with dropout, but at this point we had already invested a lot of time in the practice and felt that it would be more valuable to use our time in the final project of the subject.
+
+### Training dataset used
+
+At this point we had increased our accuracy to `91.7%`, which started to be decent but was still short of the goal of `93%`. Given that we had added dropout to the network, we felt that it was a good idea to **try once again to train the model with the extended SVHN dataset**, which we have already described previously in this document.
+
+This time, the increase in computational time was worth it, wince we were able to jump to an accuracy of `95.3%`.
+
+## Results and discussion
 
 The following table inteds to summarize all the different parameters and their different values that were used during training.
 
@@ -154,8 +179,7 @@ The following table inteds to summarize all the different parameters and their d
 
 # Exercise 3
 
-
-
+In the exercise we first trained the architecture of the previous exercise but with data that only contained numbers from 1 to 8.
 
 
 
