@@ -83,7 +83,7 @@ The results were not very promising, as the same network with the same architect
 
 #### Training the model with the extended SVHN dataset
 
-All the experiments so far have been done with the regular training and testing dataset. The training dataset conists of 73257 digits and the testing dataset consists of 26032 of them. However, we realized that in the official SVHN [website](http://ufldl.stanford.edu/housenumbers/), an extended dataset with 531131 additional samples was provided.
+All the experiments so far have been done with the regular training and testing dataset. The training dataset conists of $73257$ digits and the testing dataset consists of $26032$ of them. However, we realized that in the official SVHN [website](http://ufldl.stanford.edu/housenumbers/), an extended dataset with $531131$ additional samples was provided.
 
 So after a while of not arriving to good results, we thought that it was time to try the foolproof aproach of feeding the network with much more data. In the following figure we can see the results:
 
@@ -108,17 +108,17 @@ As a reference, we were told that a decent testing accuracy of a $93\%$ could be
 
 ## First attempts (a failure after failure story)
 
-First of all we started tinkering with the provided models in the examples by changing kernel sizes and adding or removing some layers. After trying dozens of different combinations we did not obtain any meaningful result. Our best result was a `90 %` accuracy with more than `150k` parameters.
+First of all we started tinkering with the provided models in the examples by changing kernel sizes and adding or removing some layers. After trying dozens of different combinations we did not obtain any meaningful result. Our best result was a $90 \%$ accuracy with more than `150k` parameters.
 
 Now that we have a bit more of perspective, it seems that we were too focused on following the common approach of doubling the number of channels while reducing the image resolution in half. Furthermore, we did not try more than 4 layers because the number of parameters grew too rapidly.
 
 ## Moving towards well-known architectures
 
-Given the poor results obtained and the amount of time lost without any meaningful improvement, we decided to put more tought into our network design. So, as suggested in class, we read over the papers of some well-known architectures: [MobileNetV2](https://arxiv.org/pdf/1801.04381.pdf), [InceptionNet](https://arxiv.org/pdf/1409.4842v1.pdf ) and the [VGGNet](https://arxiv.org/pdf/1409.1556.pdf).
+Given the poor results obtained and the amount of time lost without any meaningful improvement, we decided to put more thought into our network design. So, as suggested in class, we read over the papers of some well-known architectures: [MobileNetV2](https://arxiv.org/pdf/1801.04381.pdf), [InceptionNet](https://arxiv.org/pdf/1409.4842v1.pdf ) and the [VGGNet](https://arxiv.org/pdf/1409.1556.pdf).
 
-Our **first attempt** was to replicate the general structure of *MobileNetV2* (with a very simplified version of the bottleneck layer). Although we expected better results, we obtained a much worse result of around `60 %` of accuracy. Our immediate conclusion was that our simplifications were too extreme. Instead of putting more work into it, we decided to go back to VGG since it seemed a better starting point.
+Our **first attempt** was to replicate the general structure of *MobileNetV2* (with a very simplified version of the bottleneck layer). Although we expected better results, we obtained a much worse result of around $60 \%$ of accuracy. Our immediate conclusion was that our simplifications were too extreme. Instead of putting more work into it, we decided to go back to VGG since it seemed a better starting point.
 
-Our **second attempt** was to combine two already existing architectures, **Inception** and **VGG**. We first started with the naïve approach of joining the two models (so the output size of Inception had to match the VGG input). The results after the first executions were not better (around `89%`) while the number of parameters increased a lot. At this point we had already been working in this problem for many hours. So, we decided to take a break, read more information and talk with our teacher.
+Our **second attempt** was to combine two already existing architectures, **Inception** and **VGG**. We first started with the naïve approach of joining the two models (so the output size of Inception had to match the VGG input). The results after the first executions were not better (around $89\%$) while the number of parameters increased a lot. At this point we had already been working in this problem for many hours. So, we decided to take a break, read more information and talk with our teacher.
 
 Once again, since we did not obtain any meaningful result during this process, we do not find interesting to provide more details about this phase.
 
@@ -161,11 +161,11 @@ We would have liked to try higher percentages of dropout and a combination of ba
 
 At this point we had increased our accuracy to `91.7%`, which started to be decent but was still short of the goal of `93%`. Given that we had added dropout to the network, we felt that it was a good idea to **try once again to train the model with the extended SVHN dataset**, which we have already described previously in this document.
 
-This time, the increase in computational time was worth it, wince we were able to jump to an accuracy of `95.3%`.
+This time, the increase in computational time was worth it, wince we were able to jump to an accuracy of $\mathbf{95.3\%}$.
 
 ## Results and discussion
 
-With the final design explained above we obtained an **accuracy of `95.34%`**. This accuracy corresponds to the average accuracy of all the batches of the testing dataset (so some batches have higher accuracy and others have lower accuracy).
+With the final design explained above we obtained an **accuracy of $95.34\%$**. This accuracy corresponds to the average accuracy of all the batches of the testing dataset (so some batches have higher accuracy and others have lower accuracy).
 
 <img src="Results/fig8.png" style="zoom:25%"></img>
 
@@ -188,7 +188,7 @@ The following table inteds to summarize all the different parameters and their d
 | Number of parameters                 | $124,180$              |
 
 
-As we can see in the previous table, we were able to have a large amount of channels by the end of our network, which we believe that is a big responsible for the good performance of the network. However, there's still room for improvement since some of the decisions do not seem optimal. For example, an image resolution of just $3 \times 3$ seems to low to be useful in any way and, as mentioned above, a dropout of 0.05 is a bit too low.
+As we can see in the previous table, we were able to have a large amount of channels by the end of our network, which we believe that is a big responsible for the good performance of the network. However, there's still room for improvement since some of the decisions do not seem optimal. For example, an image resolution of just $3 \times 3$ seems to low to be useful in any way and, as mentioned above, a dropout of $0.05$ is a bit too low.
 
 By not reducing the image resolution that much we would have more parameters available in order to add another fully connected layer to our architecture. This could be benefitial to capture even better the high level features of our images. 
 
@@ -213,11 +213,11 @@ First of all we trained our previous model with data that contained numbers from
 
 Our first attempt was to fine-tune only the last fully connected layer. We modified the output size to **2** so that only two classe (0s and 9s) were predicted. During the fine tuning we increased the **number of epochs to 20** but we kept all the previously mentioned parameters. Since we got only 200 training samples we considered that increasing the number of epochs would benefit the model performance. 
 
-The results were pretty good since we got a 94.4 % of accuracy on the test dataset of 0s and 9s. After the good results of fine-tuning only the last layer, we fine-tuned some of the convolutional ones in addition to this one. 
+The results were pretty good since we got a $94.4 \%$ of accuracy on the test dataset of 0s and 9s. After the good results of fine-tuning only the last layer, we fine-tuned some of the convolutional ones in addition to this one. 
 
 ## Fine-tuning more than one layer
 
-We started fine-tuning from the output layers of our model to the input ones. After trying with different selection of layers we did not get better results than in the previous part. Since we were fine-tuning more than one layer we slightly increased the number of epochs to **25**. The maximum accuracy we reached was 93.10 %.
+We started fine-tuning from the output layers of our model to the input ones. After trying with different selection of layers we did not get better results than in the previous part. Since we were fine-tuning more than one layer we slightly increased the number of epochs to **25**. The maximum accuracy we reached was $93.10 \%$.
 
 When we were trying different combinations of layers we realized that the more layers we fine-tuned the worse the performance was. We considered that our actual model was already doing a good task at creating embeddings of the input images. The low-level features were captured good enough, that was the reason why our model performed so well by only finetuning the last fully connected layer.
 
