@@ -69,7 +69,7 @@ We tested SGD and Adam. Depending on the hyperparameters used, SGD behaved quite
 
 #### Transformations
 
-Pytorch, under the `torchvisions.transforms` module offers the possibility to apply transofrmations to the input images. We thought that it would be interesting to see how the training images look before deciding which transofrmations to apply.
+Pytorch, under the `torchvisions.transforms` module offers the possibility to apply transformations to the input images. We thought that it would be interesting to see how the training images look before deciding which transformations to apply.
 
 <img src="Results/fig1.png" style="zoom:25%;" ></img>
 
@@ -77,7 +77,7 @@ As we can see, most of the images contain more than one digit. The one correspon
 
 <img src="Results/fig5.png" style="zoom:15%;" ></img>
 
-We did not expect these transformations to have much of an impact. Even though, we thought that the performance could be improved if rotating and changing the colors of the images happened to help the model to gerenalize better.
+We did not expect these transformations to have much of an impact. Even though, we thought that the performance could be improved if rotating and changing the colors of the images happened to help the model to generalize better.
 
 The results were not very promising, as the same network with the same architecture and same hyperparameters managed to achieve an accuracy of the $81.67\%$ for the testing dataset. Not only the accuracy reduced, but the overall training time increased as a transformation had to be applied to every image.
 
@@ -165,27 +165,39 @@ This time, the increase in computational time was worth it, wince we were able t
 
 ## Results and discussion
 
-The following table inteds to summarize all the different parameters and their different values that were used during training.
-
-| Parameter     | Value                  |
-| ------------- | ---------------------- |
-| Batch size    | $256$                  |
-| Epochs        | $5$                    |
-| Learning rate | $0.1$                  |
-| Optimizer     | $\text{SGD}$           |
-| Weight decay  | $1\cdot 10^{-5}$       |
-| Momentum      | $0.9$                  |
-| Loss function | $\text{Cross Entropy}$ |
-
-<span style="color:red">COMENTAR RESULTATS. MAYBE ALGUNA GRÀFICA?</span>
+With the final design explained above we obtained an **accuracy of `95.34%`**. This accuracy corresponds to the average accuracy of all the batches of the testing dataset (so some batches have higher accuracy and others have lower accuracy).
 
 <img src="Results/fig8.png" style="zoom:25%"></img>
+
+The following table inteds to summarize all the different parameters and their different values that were used during training.
+
+| Parameter                            | Value                  |
+| ------------------------------------ | ---------------------- |
+| Batch size                           | $256$                  |
+| Epochs                               | $5$                    |
+| Learning rate                        | $0.1$                  |
+| Optimizer                            | $\text{SGD}$           |
+| Weight decay                         | $1\cdot 10^{-5}$       |
+| Momentum                             | $0.9$                  |
+| Loss function                        | $\text{Cross Entropy}$ |
+| Dropout                              | $0.05$                 |
+| VGG filter sizes                     | $5 \times 5$           |
+| Image resolution of last CNN layer   | $3 \times 3$           |
+| Number of channels of last CNN layer | $196$                  |
+| FC layer size                        | $1746$                 |
+| Number of parameters                 | $124,180$              |
+
+
+As we can see in the previous table, we were able to have a large amount of channels by the end of our network, which we believe that is a big responsible for the good performance of the network. However, there's still room for improvement since some of the decisions do not seem optimal. For example, an image resolution of just $3 \times 3$ seems to low to be useful in any way and, as mentioned above, a dropout of 0.05 is a bit too low.
+
+By not reducing the image resolution that much we would have more parameters available in order to add another fully connected layer to our architecture. This could be benefitial to capture even better the high level features of our images. 
+
 
 # Exercise 3
 
 ## Training base model
 
-First of all we trained the base model with data that contained numbers from 1 to 8. We used the parameters that were provided in the example code but we reduced the number of epochs to 10. 
+First of all we trained our previous model with data that contained numbers from 1 to 8. We used the parameters that were provided in the example code but we reduced the number of epochs to 10. 
 
 | Parameter     | Value                  |
 | ------------- | ---------------------- |
@@ -199,17 +211,17 @@ First of all we trained the base model with data that contained numbers from 1 t
 
 ## Fine-tuning the last FC layer
 
-Our first attempt was to fine tune only the last fully connected layer, modifying its output size to 2 so that only 0s and 9s were classified. During the fine tuning we increased the **number of epochs to 20** but we kept all the previously mentioned parameters. Since we got only 200 training samples we considered that increasing the number of epochs would benefit the model. 
+Our first attempt was to fine-tune only the last fully connected layer. We modified the output size to **2** so that only two classe (0s and 9s) were predicted. During the fine tuning we increased the **number of epochs to 20** but we kept all the previously mentioned parameters. Since we got only 200 training samples we considered that increasing the number of epochs would benefit the model performance. 
 
-The results were pretty good since we got a 94.4 % of accuracy on the test dataset of 0s and 9s.
+The results were pretty good since we got a 94.4 % of accuracy on the test dataset of 0s and 9s. After the good results of fine-tuning only the last layer, we fine-tuned some of the convolutional ones in addition to this one. 
 
 ## Fine-tuning more than one layer
 
-After the good results of fine-tuning only the last layer, we thought of keeping that fine-tuning too apart from doing it with more layers.
+We started fine-tuning from the output layers of our model to the input ones. After trying with different selection of layers we did not get better results than in the previous part. Since we were fine-tuning more than one layer we slightly increased the number of epochs to **25**. The maximum accuracy we reached was 93.10 %.
 
-We tried to fine-tune a different amount of layers of the model, but the more layers we fine-tuned the worse the performance was. We considered that our actual model was already doing a good task at creating embeddings of the input images. The low-level features were captured good enough, that was the reason why our model performed so well by only finetuning the last fully connected layer. 
+When we were trying different combinations of layers we realized that the more layers we fine-tuned the worse the performance was. We considered that our actual model was already doing a good task at creating embeddings of the input images. The low-level features were captured good enough, that was the reason why our model performed so well by only finetuning the last fully connected layer.
 
-We started finetuning from the output layers of our model to the input ones. After trying with different selection of layers we did not get better results than by just fine-tuning the last fully connected layer. The maximum accuracy we reached was 93.10 %. 
+In conclusion, if our model had more fully connected layers that captured the high level features of the images, we could have fine-tuned them and the performance could have slightly increased. On the other hand, we have observed that fine-tuning the convolutional layers does not improve the accuracy at all.
 
 
 
