@@ -16,14 +16,16 @@ It contains gray-scale images of human faces.
 The dataset is provided in the folder `Data/faces/` in `.mat` format. In the following we provide a Dataset class in pytorch to load images from this database.
 """
 
-## Create a Custom Dataset for CK database
-import torch 
+# Create a Custom Dataset for CK database
+import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from PIL import Image
 import scipy.io as sio
 import MyTorchWrapper as mtw
+from torchvision.utils import make_grid
+
 
 # # Mount Google Drive
 # from google.colab import drive
@@ -33,25 +35,26 @@ import MyTorchWrapper as mtw
 # All the data will be loaded from the provided file in Data/mnist.t
 data_path = 'P4/Data/'
 results_path = 'P4/Results/'
-save_figure = True # Whether to save figures or not
+save_figure = True  # Whether to save figures or not
 
 """Create a data loader for the face images dataset"""
 
+
 class FacesDB(torch.utils.data.Dataset):
     # Initialization method for the dataset
-    def __init__(self,dataDir = data_path+'/faces/face_ims_64x64.mat', transform = None):
+    def __init__(self, dataDir=data_path+'/faces/face_ims_64x64.mat', transform=None):
         mat_loaded = sio.loadmat(dataDir)
         self.data = mat_loaded['X']
         self.transform = transform
 
-    # What to do to load a single item in the dataset ( read image and label)    
+    # What to do to load a single item in the dataset ( read image )
     def __getitem__(self, index):
-        data = self.data[:,:,0,index]   
-        data = Image.fromarray(data,mode='L')
+        data = self.data[:, :, 0, index]
+        data = Image.fromarray(data, mode='L')
         # Apply a trasnformaiton to the image if it is indicated in the initalizer
-        if self.transform is not None : 
+        if self.transform is not None:
             data = self.transform(data)
-        
+
         # return the image and the label
         return data
 
@@ -59,17 +62,19 @@ class FacesDB(torch.utils.data.Dataset):
     def __len__(self):
         return self.data.shape[3]
 
+
 """Create a `DataLoader` and visualize one image of the dataset"""
 
 tr = transforms.Compose([transforms.ToTensor(), ])
 faces_db = FacesDB(data_path + 'faces/face_ims_64x64.mat', tr)
-train_loader = torch.utils.data.DataLoader(dataset=faces_db, batch_size=256, shuffle=True, pin_memory=True)
+train_loader = torch.utils.data.DataLoader(
+    dataset=faces_db, batch_size=256, shuffle=True, pin_memory=True)
 
 # Mini-batch images
 images = next(iter(train_loader))
 print("Size of 1 batch of images:", images.shape)
-image = images[0,:,:,:].repeat(3,1,1)
-plt.imshow(image.permute(1,2,0).squeeze().numpy())
+image = images[0, :, :, :].repeat(3, 1, 1)
+plt.imshow(image.permute(1, 2, 0).squeeze().numpy())
 plt.axis('off')
 plt.show()
 
@@ -77,8 +82,8 @@ plt.show()
 
 device = mtw.get_torch_device(use_gpu=True, debug=True)
 torch.manual_seed(10)
-# Create an IO manager instance to save and load model checkpoints
-iomanager = mtw.IOManager(storage_dir=results_path + 'notebook_models/')
+# Create an IO manager instance to save and load model checkpoints
+iomanager = mtw.IOManager(storage_dir=results_path + 'models/')
 
 """# Ex. 1
 
@@ -96,8 +101,274 @@ iomanager = mtw.IOManager(storage_dir=results_path + 'notebook_models/')
 
 ## Sol. 1
 """
+# 1.
 
-# TODO:
+# Convolution + BatchNormnalization + ReLU block for the encoder
+
+
+class ConvBNReLU(nn.Module):
+    def __init__(self, in_channels, out_channels, pooling=False):
+        super(ConvBNReLU, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3,
+                              padding=1)
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
+
+        self.pool = None
+        if pooling:
+            self.pool = nn.AvgPool2d(2, 2)
+
+    def forward(self, x):
+        if (self.pool):
+            out = self.pool(x)
+        else:
+            out = x
+        out = self.relu(self.bn(self.conv(out)))
+        return out
+
+#  BatchNormnalization + ReLU block + Convolution for the decoder
+
+
+class BNReLUConv(nn.Module):
+    def __init__(self, in_channels, out_channels, pooling=False):
+        super(BNReLUConv, self).__init__()
+        self.bn = nn.BatchNorm2d(in_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3,
+                              padding=1)
+
+        self.pool = None
+        if pooling:
+            self.pool = nn.UpsamplingNearest2d(scale_factor=2)
+
+    def forward(self, x):
+        out = self.relu(self.bn(x))
+        if (self.pool):
+            out = self.pool(out)
+        out = self.conv(out)
+        return out
+
+# Encoder definition with 3 COnv-BN-ReLU blocks and fully-connected layer
+
+
+class Encoder(nn.Module):
+    def __init__(self, out_features, base_channels=16):
+        super(Encoder, self).__init__()
+        self.layer1 = ConvBNReLU(1, base_channels, pooling=False)
+        self.layer2 = ConvBNReLU(base_channels, base_channels*2, pooling=True)
+        self.layer3 = ConvBNReLU(
+            base_channels*2, base_channels*4, pooling=True)
+        self.fc = nn.Linear(8*8*base_channels*4, out_features)
+
+    def forward(self, x):
+        out = self.layer1(x)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        return self.fc(out.view(x.shape[0], -1))
+
+# Decoder definition with a fully-connected layer and 3 BN-ReLU-COnv blocks and
+
+
+class Decoder(nn.Module):
+    def __init__(self, out_features, base_channels=16):
+        super(Decoder, self).__init__()
+        self.base_channels = base_channels
+        self.fc = nn.Linear(out_features, 8*8*base_channels*4)
+        self.layer3 = BNReLUConv(
+            base_channels*4, base_channels*2, pooling=True)
+        self.layer2 = BNReLUConv(base_channels*2, base_channels, pooling=True)
+        self.layer1 = BNReLUConv(base_channels, 1, pooling=False)
+
+    def forward(self, x):
+        out = self.fc(x)
+        out = out.view(x.shape[0], self.base_channels*4, 8, 8)
+        out = self.layer3(out)
+        out = self.layer2(out)
+        out = self.layer1(out)
+        return torch.sigmoid(out)
+
+
+class VAE(nn.Module):
+    def __init__(self, out_features=32, base_channels=16):
+        super(VAE, self).__init__()
+        # Initialize the encoder and decoder using a dimensionality out_features for the vector z
+        self.out_features = out_features
+        self.encoder = Encoder(out_features*2, base_channels)
+        self.decoder = Decoder(out_features, base_channels)
+
+    # function to obtain the mu and sigma of z for a samples x
+    def encode(self, x):
+        aux = self.encoder(x)
+        # get z mean
+        z_mean = aux[:, 0:self.out_features]
+        # get z variance
+        z_log_var = aux[:, self.out_features::]
+        return z_mean, z_log_var
+
+    # function to generate a random sample z given mu and sigma
+    def sample_z(self, z_mean, z_log_var):  #  NOTE: Reparametrization trick
+        z_std = z_log_var.mul(0.5).exp()
+        samples_unit_normal = torch.randn_like(z_mean)
+        samples_z = samples_unit_normal*z_std + z_mean
+        return samples_z
+
+    # (1) encode a sample
+    # (2) obtain a random vector z from mu and sigma
+    # (3) Reconstruct the image using the decoder
+    def forward(self, x):
+        z_mean, z_log_var = self.encode(x)
+        samples_z = self.sample_z(z_mean, z_log_var)
+        x_rec = self.decoder(samples_z)
+        return x_rec, z_mean, z_log_var
+
+# Training
+
+# Kullback-Leibler regularization computation
+
+
+def kl_divergence(z_mean, z_log_var):
+    kl_loss = 0.5 * \
+        torch.sum((torch.exp(z_log_var) + z_mean**2 - 1.0 - z_log_var), axis=1)
+    return kl_loss.mean()
+
+
+def train_validation():
+    pass
+
+# Train function
+
+
+def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_epochs=10, model_name='vae_mnist.ckpt', device='cpu'):
+    vae.to(device)
+    vae.train()  # Set the model in train mode
+    total_step = len(train_loader)
+    losses_list = []
+    # Use mean-squared error to compare the original and reconstruct the images
+    criterion = nn.MSELoss()
+
+    # Iterate over epochs
+    for epoch in range(num_epochs):
+        # Iterate the dataset
+        rec_loss_avg = 0
+        kl_loss_avg = 0
+        nBatches = 0
+        for i, images in enumerate(train_loader):
+            # Get batch of samples and labels
+            images = images.to(device)
+
+            # Forward pass (get encoder variables and reconstructed images)
+            x_rec, z_mean, z_log_var = vae(images)
+
+            # Reconstruction loss (x,x_rec)
+            reconstruction_loss = criterion(x_rec, images)
+            # Compute KL divergecnes KL( N(mu_x,sigma_x) || N(0,I))
+            kl_loss = kl_divergence(z_mean, z_log_var)
+
+            # Backward and optimize reconstruction loss and kl regularization
+            optimizer.zero_grad()
+            # we use a weight to balance the importance of the KL loss
+            loss = reconstruction_loss + kl_loss * kl_weight
+            loss.backward()
+            optimizer.step()
+
+            rec_loss_avg += reconstruction_loss.cpu().item()
+            kl_loss_avg += kl_loss.cpu().item()
+
+            nBatches += 1
+            if (i + 1) % 100 == 0:
+                print('Epoch [{}/{}], Step [{}/{}], Rec. Loss: {:.4f}, KL Loss: {:.4f}'
+                      .format(epoch+1, num_epochs, i+1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
+
+        # Visualize the images every two training epochs
+        if epoch % 2 == 0:
+            train_validation(test_loader)
+            
+
+        print('Epoch [{}/{}], Step [{}/{}], Rec. Loss: {:.4f}, KL Loss: {:.4f}'
+              .format(epoch+1, num_epochs, i+1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
+        losses_list.append(rec_loss_avg / nBatches)
+        # save trained model
+        torch.save(vae.state_dict(), results_path + '/' + model_name)
+
+    return losses_list
+
+# Training a VAE on MNIST: z has 32 dimensions
+# We use Adam optimizer which is tipically used in VAEs and GANs
+
+
+tr = transforms.Compose([
+    transforms.Resize((32, 32)),
+    transforms.ToTensor(),  # convert image to pytorch tensor [0..,1]
+])
+
+
+# Initialize the dataset
+train_faces = FacesDB(data_path+'/faces/face_ims_64x64.mat', tr)
+
+# Class to iterate over the dataset (DataLoader)
+train_loader = torch.utils.data.DataLoader(dataset=train_faces,
+                                           batch_size=128,
+                                           shuffle=True)
+
+
+test_faces = FacesDB(data_path+'/faces/face_imgs_64x64.mat',tr)
+test_loader = torch.utils.data.DataLoader(dataset=test_faces,
+                                          batch_size=10,
+                                          shuffle=False)
+
+vae = VAE(32)
+kl_weight = 0.001
+num_epochs = 1
+
+# Initialize optimizer
+learning_rate = .001
+optimizer = torch.optim.Adam(vae.parameters(), lr=learning_rate, weight_decay=1e-5)
+
+loss_list = train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=kl_weight,
+                      num_epochs=num_epochs, model_name='vae_mnist.ckpt', device=device)
+
+# Load trained VAE
+vae = VAE(32)
+vae.eval()  # Evaluation mode for the model
+vae = vae.to(device)
+
+# Visualize reconstructions on test samples
+
+test_images = next(iter(train_loader))
+test_images = test_images.to(device)
+# Get reconstructed test images with the VAE
+_, z_mean, _ = vae(test_images)
+x_rec = vae.decoder(z_mean)
+
+plt.figure(figsize=(18, 9))
+image_grid = make_grid(test_images.cpu(), nrow=8, padding=1)
+plt.subplot(1, 2, 1)
+plt.imshow(image_grid.permute(1, 2, 0).detach().numpy())
+plt.title('Original Images')
+
+plt.subplot(1, 2, 2)
+plt.title('Reconstructed Images')
+image_grid = make_grid(x_rec.cpu(), nrow=8, padding=1)
+plt.imshow(image_grid.permute(1, 2, 0).detach().numpy())
+plt.show()
+
+# Compute reconstruction loss on testing dataset
+rec_loss_avg = 0
+criterion = nn.MSELoss()
+n_batches = 0
+for i, images in enumerate(train_loader):
+    # Get batch of samples and labels
+    images = images.to(device)
+
+    # Forward pass
+    z_mean, z_log_var = vae.encode(images)
+    x_rec = vae.decoder(z_mean)
+    reconstruction_loss = criterion(x_rec, images)
+    rec_loss_avg += reconstruction_loss.cpu().item()
+    n_batches += 1
+
+print('Reconstruction Error on test set: ' + str(rec_loss_avg / n_batches))
+
 
 """# Ex. 2
 
