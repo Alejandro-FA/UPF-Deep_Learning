@@ -45,7 +45,7 @@ save_figure = True  # Whether to save figures or not # FIXME: not used
 num_epochs = 2000
 plot_every = 200 # During training, plot results every {plot_every} epochs
 
-dataloader_workers = 16 # The amount of processes used to load data in parallel. In case of doubt use 0.
+dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
 output_resolution = 32
 num_val_images = 9
 
