@@ -41,8 +41,10 @@ from abc import ABC, abstractmethod
 data_path = 'P4/Data/'
 results_path = 'P4/Results/'
 save_figure = True  # Whether to save figures or not
-plot_every = 2 # During training, plot results every {plot_every} epochs
-
+num_epochs = 100
+plot_every = 20 # During training, plot results every {plot_every} epochs
+train_vae = False
+train_gan = True
 """Create a data loader for the face images dataset"""
 
 
@@ -415,7 +417,7 @@ def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_ep
               .format(epoch, num_epochs, i+1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
         losses_list.append(rec_loss_avg / nBatches)
         # save trained model
-        torch.save(vae.state_dict(), results_path + '/' + vae.name + '_ck')
+        torch.save(vae.state_dict(), f"{results_path}{vae.name}_ck.ckpt")
 
     return losses_list
 
@@ -442,25 +444,24 @@ test_loader = torch.utils.data.DataLoader(dataset=test_faces,
                                           batch_size=10,
                                           shuffle=False)
 
-vae = VAE(32)
-kl_weight = 0.001
 
-#Initialize optimizer 
-learning_rate = .001
-optimizer = torch.optim.Adam(vae.parameters(),lr = learning_rate, weight_decay=1e-5)
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-num_epochs = 20
+# Train the model
+if train_vae:
+    vae = VAE(32)
+    kl_weight = 0.001
+    learning_rate = .001
+    optimizer = torch.optim.Adam(vae.parameters(),lr = learning_rate, weight_decay=1e-5)
+    
+    print("#################### Training VAE ####################")
+    loss_list = train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=kl_weight,
+                        num_epochs=num_epochs, device=device)
 
-print("#################### Training VAE ####################")
-loss_list = train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=kl_weight,
-                      num_epochs=num_epochs, device=device)
-
-figure = plt.figure(figsize=(5, 5))
-plt.title("VAE loss evolution", fontsize=14, fontweight="bold")
-plt.plot(loss_list, color="blue")
-plt.xlabel("Epochs")
-plt.ylabel("Loss")
-plt.grid()
+    figure = plt.figure(figsize=(5, 5))
+    plt.title("VAE loss evolution", fontsize=14, fontweight="bold")
+    plt.plot(loss_list, color="blue")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.grid()
 
 
 """# Ex. 2
@@ -505,7 +506,7 @@ class Generator(nn.Module):
     def forward(self,z):
         return torch.sigmoid(self.decoder(z))
 
-    # FIXME: remove if necessary
+    # FIXME: remove if (nan)
     # # Sample a set of images from random vectors z
     # def sample(self,n_samples=256,device='cpu'):
     #     samples_unit_normal = torch.randn((n_samples,self.in_features)).to(device)
@@ -526,7 +527,7 @@ class GAN(nn.Module, GenerativeModel):
     
     @property
     def name(self):
-        return "G"
+        return "GAN"
 
         
 
@@ -544,7 +545,7 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
     gen_losses_list = []
 
     # Iterate over epochs
-    for epoch in range(num_epochs):
+    for epoch in range(1, num_epochs + 1):
         # Iterate the dataset
         disc_loss_avg = 0
         gen_loss_avg = 0
@@ -558,7 +559,7 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
 
             # Forward pass
             # Generate random images with the generator
-            fake_images = gan.sample(n_images,device=device)
+            fake_images = gan.sample(n_images, device=device)
             
             # Use the discriminator to obtain the probabilties for real and generate imee
             prob_real = disc(real_images)
@@ -588,7 +589,7 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
             nBatches+=1
             if (i+1) % 200 == 0:
                 print ('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}' 
-                       .format(epoch+1, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
+                       .format(epoch, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
                 
 
         # Visualize the images every two training epochs
@@ -599,37 +600,40 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
 
         # Print loss at the end of the epoch
         print ('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}' 
-                       .format(epoch+1, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
+                       .format(epoch, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
         
         # Save model
         disc_losses_list.append(disc_loss_avg / nBatches)
         gen_losses_list.append(gen_loss_avg / nBatches)
-        torch.save(gan.state_dict(), results_path + gan.name)
+        torch.save(gan.state_dict(), f"{results_path}{gan.name}_ck.ckpt")
           
     return disc_losses_list, gen_losses_list
 
+# Train the model
+if train_gan:
+    # Define Geneartor and Discriminator networks
+    gan = GAN(in_features = 32)
 
-# Define Geneartor and Discriminator networks
-gan = GAN(in_features = 32)
+    #Initialize indepdent optimizer for both networks
+    learning_rate = .0005
+    optimizer_gen = torch.optim.Adam(gan.generator.parameters(), lr = learning_rate, weight_decay=1e-5)
+    optimizer_disc = torch.optim.Adam(gan.discriminator.parameters(), lr = learning_rate, weight_decay=1e-5)
 
-#Initialize indepdent optimizer for both networks
-learning_rate = .0005
-optimizer_gen = torch.optim.Adam(gan.generator.parameters(), lr = learning_rate, weight_decay=1e-5)
-optimizer_disc = torch.optim.Adam(gan.discriminator.parameters(), lr = learning_rate, weight_decay=1e-5)
+    print("\n\n#################### Training GAN ####################")
+    # Train the GAN
+    disc_loss_list, gen_loss_list = train_GAN(
+        gan, train_loader, optimizer_gen, optimizer_disc,
+        num_epochs=num_epochs, device=device, plot_every=plot_every
+    )
 
-print("\n\n#################### Training GAN ####################")
-# Train the GAN
-disc_loss_list, gen_loss_list = train_GAN(
-    gan, train_loader, optimizer_gen, optimizer_disc,
-    num_epochs=2, device=device, plot_every=plot_every
-)
+    figure2 = plt.figure(figsize=(5, 5))
+    plt.title("GAN loss evolution", fontsize=14, fontweight="bold")
+    plt.plot(disc_loss_list, label="Discriminator loss", color="blue")
+    plt.plot(gen_loss_list, label="Generator loss", color="orange")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.grid()
+    plt.legend()
 
-figure2 = plt.figure(figsize=(5, 5))
-plt.title("GAN loss evolution", fontsize=14, fontweight="bold")
-plt.plot(disc_loss_list, label="Discriminator loss", color="blue")
-plt.plot(gen_loss_list, label="Generator loss", color="orange")
-plt.xlabel("Epochs")
-plt.ylabel("Loss")
-plt.grid()
-plt.legend()
+
 plt.show()
