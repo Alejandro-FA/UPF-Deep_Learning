@@ -42,8 +42,8 @@ data_path = 'P4/Data/'
 results_path = 'P4/Results/'
 
 save_figure = True  # Whether to save figures or not # FIXME: not used
-num_epochs = 2000
-plot_every = 200 # During training, plot results every {plot_every} epochs
+num_epochs = 3000
+plot_every = 300 # During training, plot results every {plot_every} epochs
 
 dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
 output_resolution = 32
@@ -108,7 +108,7 @@ train_faces = FacesDB(data_path+'faces/face_ims_64x64.mat', tr_training)
 # Class to iterate over the dataset (DataLoader)
 train_loader = torch.utils.data.DataLoader(
     dataset=train_faces,
-    batch_size=math.ceil(len(train_faces) / 10), # TODO: Modify according to PC used
+    batch_size=math.ceil(len(train_faces) / 9), # TODO: Modify according to PC used
     shuffle=True,
     pin_memory=True,
     num_workers=dataloader_workers,
@@ -447,9 +447,8 @@ def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_ep
             generate_images(vae, epoch, n_samples=test_loader.batch_size, device=device)
             generate_interpolated(vae, epoch, n_samples=test_loader.batch_size, device=device)
             
-            
         print('Epoch [{}/{}], Step [{}/{}], Rec. Loss: {:.4f}, KL Loss: {:.4f}'
-              .format(epoch, num_epochs, i+1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
+              .format(epoch, num_epochs, i + 1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
         losses_list.append(rec_loss_avg / nBatches)
         # save trained model
         torch.save(vae.state_dict(), f"{results_path}{vae.name}_ck.ckpt")
@@ -542,7 +541,16 @@ class GAN(nn.Module, GenerativeModel):
     def name(self):
         return "GAN"
 
-        
+
+class TrainController:
+    def __init__(self, loss_threshold=0.01, train_gen_every=5) -> None:
+        self.counter = 0
+        self.train_gen_every = train_gen_every
+        self.loss_threshold = loss_threshold
+    
+    def is_train_generator(self, disc_loss) -> bool:
+        self.counter += 1
+        return self.counter % self.train_gen_every == 0 or disc_loss < self.loss_threshold
 
 
 # GAN Train function. We have a generator and discriminator models and their respective optimizers.
@@ -556,14 +564,16 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
     total_step = len(train_loader)
     disc_losses_list = []
     gen_losses_list = []
-
+    
+    controller = TrainController(loss_threshold=0.01, train_gen_every=10)
+    update_generator = False
+    
     # Iterate over epochs
     for epoch in range(1, num_epochs + 1):
         # Iterate the dataset
         disc_loss_avg = 0
         gen_loss_avg = 0
         nBatches = 0
-        update_generator = True
 
         for i, real_images in enumerate(train_loader):
             # Get batch of samples and labels
@@ -589,22 +599,19 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
                 optimizer_gen.zero_grad()
                 gen_loss.backward() # Necessary to not erase intermediate variables needed for computing disc_loss gradient
                 optimizer_gen.step()
-                update_generator = False
             else:           
                 optim_disc.zero_grad()
                 disc_loss.backward()
                 optimizer_disc.step()
-                update_generator = True
 
             disc_loss_avg += disc_loss.cpu().item()
             gen_loss_avg += gen_loss.cpu().item()
 
-            nBatches+=1
+            nBatches += 1
             if (i+1) % 200 == 0:
-                print ('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}' 
+                print ('Training {}. Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}' 
                        .format(epoch, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
                 
-
         # Visualize the images every two training epochs
         if epoch % plot_every == 0:
             n_samples = num_val_images # NOTE: num_val_images is a global variable
@@ -612,9 +619,13 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
             generate_interpolated(gan, epoch, n_samples, device=device)
 
         # Print loss at the end of the epoch
-        print ('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}' 
-                       .format(epoch, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
+        trained_module = "generator" if update_generator else "discriminator"
+        print ('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}, Trained module: {}'
+                       .format(epoch, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches, trained_module))
         
+        # Decide whether to train the generator or the discriminator for the next epoch
+        update_generator = controller.is_train_generator(disc_loss_avg / nBatches) 
+    
         # Save model
         disc_losses_list.append(disc_loss_avg / nBatches)
         gen_losses_list.append(gen_loss_avg / nBatches)
@@ -628,9 +639,10 @@ if train_gan:
     gan = GAN(in_features=output_resolution)
 
     #Initialize indepdent optimizer for both networks
-    learning_rate = .0005
-    optimizer_gen = torch.optim.Adam(gan.generator.parameters(), lr = learning_rate, weight_decay=1e-5)
-    optimizer_disc = torch.optim.Adam(gan.discriminator.parameters(), lr = learning_rate, weight_decay=1e-5)
+    learning_rate_gen = .0005
+    learning_rate_disc = .0005 # FIXME: What about making the discriminator learn quicker
+    optimizer_gen = torch.optim.Adam(gan.generator.parameters(), lr = learning_rate_gen, weight_decay=1e-5)
+    optimizer_disc = torch.optim.Adam(gan.discriminator.parameters(), lr = learning_rate_disc, weight_decay=1e-5)
 
     print("\n\n#################### Training GAN ####################")
     # Train the GAN
