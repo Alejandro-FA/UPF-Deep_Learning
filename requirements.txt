@@ -12,3 +12,4 @@ torchaudio
 ipykernel
 scikit-learn
 torchinfo
+imageio

@@ -25,6 +25,11 @@ from PIL import Image
 import scipy.io as sio
 import MyTorchWrapper as mtw
 from torchvision.utils import make_grid
+from math import sqrt
+import imageio
+import numpy as np
+import math
+from abc import ABC, abstractmethod
 
 
 # # Mount Google Drive
@@ -36,6 +41,7 @@ from torchvision.utils import make_grid
 data_path = 'P4/Data/'
 results_path = 'P4/Results/'
 save_figure = True  # Whether to save figures or not
+plot_every = 2 # During training, plot results every {plot_every} epochs
 
 """Create a data loader for the face images dataset"""
 
@@ -70,13 +76,13 @@ faces_db = FacesDB(data_path + 'faces/face_ims_64x64.mat', tr)
 train_loader = torch.utils.data.DataLoader(
     dataset=faces_db, batch_size=256, shuffle=True, pin_memory=True)
 
-# Mini-batch images
-images = next(iter(train_loader))
-print("Size of 1 batch of images:", images.shape)
-image = images[0, :, :, :].repeat(3, 1, 1)
-plt.imshow(image.permute(1, 2, 0).squeeze().numpy())
-plt.axis('off')
-plt.show()
+# # Mini-batch images
+# images = next(iter(train_loader))
+# print("Size of 1 batch of images:", images.shape)
+# image = images[0, :, :, :].repeat(3, 1, 1)
+# plt.imshow(image.permute(1, 2, 0).squeeze().numpy())
+# plt.axis('off')
+# plt.show()
 
 """# Our global variables"""
 
@@ -84,6 +90,30 @@ device = mtw.get_torch_device(use_gpu=True, debug=True)
 torch.manual_seed(10)
 # Create an IO manager instance to save and load model checkpoints
 iomanager = mtw.IOManager(storage_dir=results_path + 'models/')
+
+class GenerativeModel(ABC):
+    """Interface for generative models
+    """
+    def sample(self, n_samples, device='cpu'):
+        """Sample a set of images from random vectors z
+        """
+        z = self.get_latent_space(n_samples, device)
+        return self.decode(z)
+
+    @abstractmethod
+    def get_latent_space(self, n_samples, device='cpu'):
+        pass
+        
+    @abstractmethod
+    def decode(self, z):
+        pass
+
+    @property
+    @abstractmethod
+    def name(self):
+        pass
+        
+
 
 """# Ex. 1
 
@@ -173,27 +203,27 @@ class Decoder(nn.Module):
     def __init__(self, out_features, base_channels=16):
         super(Decoder, self).__init__()
         self.base_channels = base_channels
-        self.fc = nn.Linear(out_features, 8*8*base_channels*4)
+        self.fc = nn.Linear(out_features, 8 * 8 * base_channels * 4)
         self.layer3 = BNReLUConv(
-            base_channels*4, base_channels*2, pooling=True)
-        self.layer2 = BNReLUConv(base_channels*2, base_channels, pooling=True)
+            base_channels*4, base_channels * 2, pooling=True)
+        self.layer2 = BNReLUConv(base_channels * 2, base_channels, pooling=True)
         self.layer1 = BNReLUConv(base_channels, 1, pooling=False)
 
     def forward(self, x):
         out = self.fc(x)
-        out = out.view(x.shape[0], self.base_channels*4, 8, 8)
+        out = out.view(x.shape[0], self.base_channels * 4, 8, 8)
         out = self.layer3(out)
         out = self.layer2(out)
         out = self.layer1(out)
         return torch.sigmoid(out)
 
 
-class VAE(nn.Module):
+class VAE(nn.Module, GenerativeModel):
     def __init__(self, out_features=32, base_channels=16):
         super(VAE, self).__init__()
         # Initialize the encoder and decoder using a dimensionality out_features for the vector z
         self.out_features = out_features
-        self.encoder = Encoder(out_features*2, base_channels)
+        self.encoder = Encoder(out_features * 2, base_channels)
         self.decoder = Decoder(out_features, base_channels)
 
     # function to obtain the mu and sigma of z for a samples x
@@ -220,25 +250,120 @@ class VAE(nn.Module):
         samples_z = self.sample_z(z_mean, z_log_var)
         x_rec = self.decoder(samples_z)
         return x_rec, z_mean, z_log_var
+    
+    
+    def get_latent_space(self, n_samples, device='cpu'):
+        z = torch.randn((n_samples, self.out_features)).to(device)
+        return z
+    
+    def decode(self, z):
+        return self.decoder(z)
+    
+    @property
+    def name(self):
+        return 'VAE'
+    
+    
 
 # Training
-
 # Kullback-Leibler regularization computation
 
-
 def kl_divergence(z_mean, z_log_var):
-    kl_loss = 0.5 * \
-        torch.sum((torch.exp(z_log_var) + z_mean**2 - 1.0 - z_log_var), axis=1)
+    kl_loss = 0.5 * torch.sum((torch.exp(z_log_var) + z_mean**2 - 1.0 - z_log_var), axis=1)
     return kl_loss.mean()
 
 
-def train_validation():
-    pass
+# TODO: remove
+def compute_train_reconstruction_error(vae, train_loader):
+    rec_loss_avg = 0
+    criterion = nn.MSELoss()
+    n_batches = 0
+    for images in train_loader:
+        # Get batch of samples and labels
+        images = images.to(device)
+
+        # Forward pass
+        z_mean, _ = vae.encode(images)
+        x_rec = vae.decoder(z_mean)
+        reconstruction_loss = criterion(x_rec, images)
+        rec_loss_avg += reconstruction_loss.cpu().item()
+        n_batches += 1
+
+    return rec_loss_avg / n_batches
+
+
+def plot_reconstructed_images(vae, test_loader, epoch):
+    test_images = next(iter(test_loader))
+    test_images = test_images.to(device)
+    # Get reconstructed test images with the VAE
+    _, z_mean, _ = vae(test_images)
+    x_rec = vae.decoder(z_mean)
+
+    figure, axes = plt.subplots(2, 1, figsize=(test_loader.batch_size * 2 + 2, test_loader.batch_size + 1))
+    figure.suptitle(f"Reconstructed images at epoch {epoch}", fontsize=14, fontweight="bold")
+    
+    image_grid = make_grid(test_images.cpu(), nrow=test_loader.batch_size, padding=1)
+    
+    axes[0].imshow(image_grid.permute(1, 2, 0).detach().numpy())
+    axes[0].set_title('Original Images')
+    axes[0].axis("off")
+
+    axes[1].set_title('Reconstructed Images')
+    image_grid = make_grid(x_rec.cpu(), nrow=test_loader.batch_size, padding=1)
+    axes[1].imshow(image_grid.permute(1, 2, 0).detach().numpy())
+    axes[1].axis("off")
+    # plt.show()
+
+
+def generate_images(model: GenerativeModel, epoch, n_samples=10, device="cpu"):    
+    ### Generate random samples
+    model.eval()
+    x_rec = model.sample(n_samples, device)
+
+    # Show synthetic images
+    plt.figure(figsize= (n_samples + 1, n_samples + 1))
+    plt.title(f"Generated images at epoch {epoch}", fontsize=14, fontweight="bold")
+    image_grid = make_grid(x_rec.cpu(), nrow=n_samples, padding=1)
+    plt.imshow(image_grid.permute(1,2,0).detach().numpy())
+    # plt.show()
+
+
+def generate_interpolated(model: GenerativeModel, epoch, n_samples=10, device='cpu'):
+    ### Generate random samples
+    model.eval()
+    n_iterpolations = 50 # Number of intermediate steps between init and final
+
+    # Sample a set of pairs z_init and z_final
+    z_init = model.get_latent_space(n_samples=n_samples, device=device)*2
+    z_final = model.get_latent_space(n_samples=n_samples, device=device)*2
+
+    # Compute interpolations between z_init and z_final
+    # and generate an image for each interpolation.
+    interpolation_images = []
+    for interp in range(0, n_iterpolations):
+        interp_0_1 = float(interp) / (n_iterpolations-1)
+        z = z_init * interp_0_1 + z_final * (1 - interp_0_1)
+        x_rec = model.decode(z)
+        image_grid = make_grid(x_rec.cpu(), nrow=math.ceil(sqrt(n_samples)), padding=1)
+        image_grid = image_grid.permute(1, 2, 0).detach().numpy()
+        # save the generated images in a list
+        interpolation_images.append((image_grid * 255.0).astype(np.uint8))
+
+    # Concatenate the inversion of the list to generate a "loop" animation
+    interpolation_images += interpolation_images[::-1]
+
+    # Generate and visualize a give showing the interpolation results.
+    imname = f"{results_path}/interpolations/{model.name}/ck_epoch_{epoch}.gif"
+    fps = 50
+    duration = (1000 * 1/fps)
+    imageio.mimsave(imname, interpolation_images, duration = duration)
+
+    # with open(imname,'rb') as f:
+    #     display(Image(data=f.read(), format='png',width=512,height=512))
+
 
 # Train function
-
-
-def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_epochs=10, model_name='vae_mnist.ckpt', device='cpu'):
+def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_epochs=10, device='cpu', plot_every=2):
     vae.to(device)
     vae.train()  # Set the model in train mode
     total_step = len(train_loader)
@@ -247,7 +372,7 @@ def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_ep
     criterion = nn.MSELoss()
 
     # Iterate over epochs
-    for epoch in range(num_epochs):
+    for epoch in range(1, num_epochs + 1):
         # Iterate the dataset
         rec_loss_avg = 0
         kl_loss_avg = 0
@@ -277,22 +402,23 @@ def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_ep
             nBatches += 1
             if (i + 1) % 100 == 0:
                 print('Epoch [{}/{}], Step [{}/{}], Rec. Loss: {:.4f}, KL Loss: {:.4f}'
-                      .format(epoch+1, num_epochs, i+1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
+                      .format(epoch, num_epochs, i+1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
 
         # Visualize the images every two training epochs
-        if epoch % 2 == 0:
-            train_validation(test_loader)
+        if epoch % plot_every == 0:
+            plot_reconstructed_images(vae, test_loader, epoch)
+            generate_images(vae, epoch, n_samples=test_loader.batch_size, device=device)
+            generate_interpolated(vae, epoch, n_samples=test_loader.batch_size, device=device)
             
-
+            
         print('Epoch [{}/{}], Step [{}/{}], Rec. Loss: {:.4f}, KL Loss: {:.4f}'
-              .format(epoch+1, num_epochs, i+1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
+              .format(epoch, num_epochs, i+1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
         losses_list.append(rec_loss_avg / nBatches)
         # save trained model
-        torch.save(vae.state_dict(), results_path + '/' + model_name)
+        torch.save(vae.state_dict(), results_path + '/' + vae.name + '_ck')
 
     return losses_list
 
-# Training a VAE on MNIST: z has 32 dimensions
 # We use Adam optimizer which is tipically used in VAEs and GANs
 
 
@@ -303,7 +429,7 @@ tr = transforms.Compose([
 
 
 # Initialize the dataset
-train_faces = FacesDB(data_path+'/faces/face_ims_64x64.mat', tr)
+train_faces = FacesDB(data_path+'faces/face_ims_64x64.mat', tr)
 
 # Class to iterate over the dataset (DataLoader)
 train_loader = torch.utils.data.DataLoader(dataset=train_faces,
@@ -311,68 +437,35 @@ train_loader = torch.utils.data.DataLoader(dataset=train_faces,
                                            shuffle=True)
 
 
-test_faces = FacesDB(data_path+'/faces/face_imgs_64x64.mat',tr)
+test_faces = FacesDB(data_path+'faces/face_ims_64x64.mat',tr) # NOTE: These are the same as the train faces
 test_loader = torch.utils.data.DataLoader(dataset=test_faces,
                                           batch_size=10,
                                           shuffle=False)
 
 vae = VAE(32)
 kl_weight = 0.001
-num_epochs = 1
 
-# Initialize optimizer
+#Initialize optimizer 
 learning_rate = .001
-optimizer = torch.optim.Adam(vae.parameters(), lr=learning_rate, weight_decay=1e-5)
+optimizer = torch.optim.Adam(vae.parameters(),lr = learning_rate, weight_decay=1e-5)
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+num_epochs = 20
 
+print("#################### Training VAE ####################")
 loss_list = train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=kl_weight,
-                      num_epochs=num_epochs, model_name='vae_mnist.ckpt', device=device)
+                      num_epochs=num_epochs, device=device)
 
-# Load trained VAE
-vae = VAE(32)
-vae.eval()  # Evaluation mode for the model
-vae = vae.to(device)
-
-# Visualize reconstructions on test samples
-
-test_images = next(iter(train_loader))
-test_images = test_images.to(device)
-# Get reconstructed test images with the VAE
-_, z_mean, _ = vae(test_images)
-x_rec = vae.decoder(z_mean)
-
-plt.figure(figsize=(18, 9))
-image_grid = make_grid(test_images.cpu(), nrow=8, padding=1)
-plt.subplot(1, 2, 1)
-plt.imshow(image_grid.permute(1, 2, 0).detach().numpy())
-plt.title('Original Images')
-
-plt.subplot(1, 2, 2)
-plt.title('Reconstructed Images')
-image_grid = make_grid(x_rec.cpu(), nrow=8, padding=1)
-plt.imshow(image_grid.permute(1, 2, 0).detach().numpy())
-plt.show()
-
-# Compute reconstruction loss on testing dataset
-rec_loss_avg = 0
-criterion = nn.MSELoss()
-n_batches = 0
-for i, images in enumerate(train_loader):
-    # Get batch of samples and labels
-    images = images.to(device)
-
-    # Forward pass
-    z_mean, z_log_var = vae.encode(images)
-    x_rec = vae.decoder(z_mean)
-    reconstruction_loss = criterion(x_rec, images)
-    rec_loss_avg += reconstruction_loss.cpu().item()
-    n_batches += 1
-
-print('Reconstruction Error on test set: ' + str(rec_loss_avg / n_batches))
+figure = plt.figure(figsize=(5, 5))
+plt.title("VAE loss evolution", fontsize=14, fontweight="bold")
+plt.plot(loss_list, color="blue")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.grid()
 
 
 """# Ex. 2
 
-1. Following the example of the MNIST , train a GAN with the images we have provided for the CK dataset.
+1. Following the example of the MNIST, train a GAN with the images we have provided for the CK dataset.
 
 2. For every two epochs during training:
 
@@ -387,4 +480,156 @@ print('Reconstruction Error on test set: ' + str(rec_loss_avg / n_batches))
 ## Sol. 2
 """
 
-# TODO:
+# Discriminator similar to VAE encoder
+class Discriminator(nn.Module):
+    def __init__(self, base_channels=16):
+        super(Discriminator, self).__init__()
+        # last fully connected layer acts as a a binary classifier
+        self.classifier = Encoder(1,base_channels)
+
+    # Forward pass obtaining the discriminator probability
+    def forward(self,x):
+        out = self.classifier(x)
+        # use sigmoid to get the real/fake image probability
+        return torch.sigmoid(out)
+
+# Generator is defined as VAE decoder
+class Generator(nn.Module):
+    def __init__(self, in_features, base_channels=16):
+        super(Generator, self).__init__()
+        self.base_channels = base_channels
+        self.in_features = in_features
+        self.decoder = Decoder(in_features,base_channels)
+
+    # Generate an image from vector z
+    def forward(self,z):
+        return torch.sigmoid(self.decoder(z))
+
+    # FIXME: remove if necessary
+    # # Sample a set of images from random vectors z
+    # def sample(self,n_samples=256,device='cpu'):
+    #     samples_unit_normal = torch.randn((n_samples,self.in_features)).to(device)
+    #     return self.decoder(samples_unit_normal)
+  
+
+class GAN(nn.Module, GenerativeModel):
+    def __init__(self, in_features, base_channels=16):
+        super(GAN, self).__init__()
+        self.discriminator = Discriminator(base_channels=base_channels)
+        self.generator = Generator(in_features, base_channels=base_channels)
+
+    def get_latent_space(self, n_samples, device='cpu'):
+        return torch.randn((n_samples, self.generator.in_features)).to(device)
+    
+    def decode(self, z):
+        return self.generator.decoder(z)
+    
+    @property
+    def name(self):
+        return "G"
+
+        
+
+
+# GAN Train function. We have a generator and discriminator models and their respective optimizers.
+def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
+              num_epochs=10, device='cpu', plot_every=2):
+    gan.train()
+    gan = gan.to(device)
+    gen = gan.generator
+    disc = gan.discriminator
+
+    total_step = len(train_loader)
+    disc_losses_list = []
+    gen_losses_list = []
+
+    # Iterate over epochs
+    for epoch in range(num_epochs):
+        # Iterate the dataset
+        disc_loss_avg = 0
+        gen_loss_avg = 0
+        nBatches = 0
+        update_generator = True
+
+        for i, real_images in enumerate(train_loader):
+            # Get batch of samples and labels
+            real_images = real_images.to(device)
+            n_images = real_images.shape[0]
+
+            # Forward pass
+            # Generate random images with the generator
+            fake_images = gan.sample(n_images,device=device)
+            
+            # Use the discriminator to obtain the probabilties for real and generate imee
+            prob_real = disc(real_images)
+            prob_fake = disc(fake_images)
+            
+            # Generator loss
+            gen_loss = -torch.log(prob_fake).mean()
+            # Discriminator loss
+            disc_loss = -0.5 * (torch.log(prob_real) + torch.log(1 - prob_fake)).mean()
+
+            
+            # We are going to update the discriminator and generator parameters alternatively at each iteration
+            if update_generator:
+                optimizer_gen.zero_grad()
+                gen_loss.backward() # Necessary to not erase intermediate variables needed for computing disc_loss gradient
+                optimizer_gen.step()
+                update_generator = False
+            else:           
+                optim_disc.zero_grad()
+                disc_loss.backward()
+                optimizer_disc.step()
+                update_generator = True
+
+            disc_loss_avg += disc_loss.cpu().item()
+            gen_loss_avg += gen_loss.cpu().item()
+
+            nBatches+=1
+            if (i+1) % 200 == 0:
+                print ('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}' 
+                       .format(epoch+1, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
+                
+
+        # Visualize the images every two training epochs
+        if epoch % plot_every == 0:
+            n_samples = 10
+            generate_images(gan, epoch, n_samples, device=device)
+            generate_interpolated(gan, epoch, n_samples, device=device)
+
+        # Print loss at the end of the epoch
+        print ('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}' 
+                       .format(epoch+1, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
+        
+        # Save model
+        disc_losses_list.append(disc_loss_avg / nBatches)
+        gen_losses_list.append(gen_loss_avg / nBatches)
+        torch.save(gan.state_dict(), results_path + gan.name)
+          
+    return disc_losses_list, gen_losses_list
+
+
+# Define Geneartor and Discriminator networks
+gan = GAN(in_features = 32)
+
+#Initialize indepdent optimizer for both networks
+learning_rate = .0005
+optimizer_gen = torch.optim.Adam(gan.generator.parameters(), lr = learning_rate, weight_decay=1e-5)
+optimizer_disc = torch.optim.Adam(gan.discriminator.parameters(), lr = learning_rate, weight_decay=1e-5)
+
+print("\n\n#################### Training GAN ####################")
+# Train the GAN
+disc_loss_list, gen_loss_list = train_GAN(
+    gan, train_loader, optimizer_gen, optimizer_disc,
+    num_epochs=2, device=device, plot_every=plot_every
+)
+
+figure2 = plt.figure(figsize=(5, 5))
+plt.title("GAN loss evolution", fontsize=14, fontweight="bold")
+plt.plot(disc_loss_list, label="Discriminator loss", color="blue")
+plt.plot(gen_loss_list, label="Generator loss", color="orange")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.grid()
+plt.legend()
+plt.show()
