@@ -40,9 +40,16 @@ from abc import ABC, abstractmethod
 # All the data will be loaded from the provided file in Data/mnist.t
 data_path = 'P4/Data/'
 results_path = 'P4/Results/'
-save_figure = True  # Whether to save figures or not
-num_epochs = 100
-plot_every = 20 # During training, plot results every {plot_every} epochs
+
+save_figure = True  # Whether to save figures or not # FIXME: not used
+num_epochs = 2000
+plot_every = 200 # During training, plot results every {plot_every} epochs
+
+dataloader_workers = 16 # The amount of processes used to load data in parallel. In case of doubt use 0.
+output_resolution = 32
+num_val_images = 9
+
+explore_dataset = False
 train_vae = False
 train_gan = True
 """Create a data loader for the face images dataset"""
@@ -72,26 +79,54 @@ class FacesDB(torch.utils.data.Dataset):
 
 
 """Create a `DataLoader` and visualize one image of the dataset"""
+if explore_dataset:
+    tr_exploration = transforms.Compose([transforms.ToTensor(), ])
+    faces_db = FacesDB(data_path + 'faces/face_ims_64x64.mat', tr_exploration)
+    exploration_loader = torch.utils.data.DataLoader(
+        dataset=faces_db, batch_size=256, shuffle=True, pin_memory=True)
+    
+    # Mini-batch images
+    images = next(iter(exploration_loader))
+    print("Size of 1 batch of images:", images.shape)
+    print("Total number of images:", len(faces_db))
+    image = images[0, :, :, :].repeat(3, 1, 1)
+    plt.imshow(image.permute(1, 2, 0).squeeze().numpy())
+    plt.axis('off')
+    plt.show()
 
-tr = transforms.Compose([transforms.ToTensor(), ])
-faces_db = FacesDB(data_path + 'faces/face_ims_64x64.mat', tr)
+
+"""Create a `DataLoader` for training and validation"""
+tr_training = transforms.Compose([
+    transforms.Resize((output_resolution, output_resolution)),
+    transforms.ToTensor(),  # convert image to pytorch tensor [0..,1]
+])
+
+
+# Initialize the dataset
+train_faces = FacesDB(data_path+'faces/face_ims_64x64.mat', tr_training)
+
+# Class to iterate over the dataset (DataLoader)
 train_loader = torch.utils.data.DataLoader(
-    dataset=faces_db, batch_size=256, shuffle=True, pin_memory=True)
+    dataset=train_faces,
+    batch_size=math.ceil(len(train_faces) / 10), # TODO: Modify according to PC used
+    shuffle=True,
+    pin_memory=True,
+    num_workers=dataloader_workers,
+)
 
-# # Mini-batch images
-# images = next(iter(train_loader))
-# print("Size of 1 batch of images:", images.shape)
-# image = images[0, :, :, :].repeat(3, 1, 1)
-# plt.imshow(image.permute(1, 2, 0).squeeze().numpy())
-# plt.axis('off')
-# plt.show()
+test_loader = torch.utils.data.DataLoader(
+    dataset=train_faces,
+    batch_size=num_val_images,
+    shuffle=False
+)
+
 
 """# Our global variables"""
-
 device = mtw.get_torch_device(use_gpu=True, debug=True)
 torch.manual_seed(10)
+
 # Create an IO manager instance to save and load model checkpoints
-iomanager = mtw.IOManager(storage_dir=results_path + 'models/')
+iomanager = mtw.IOManager(storage_dir=results_path + 'models/') # FIXME: not used
 
 class GenerativeModel(ABC):
     """Interface for generative models
@@ -317,7 +352,7 @@ def plot_reconstructed_images(vae, test_loader, epoch):
     # plt.show()
 
 
-def generate_images(model: GenerativeModel, epoch, n_samples=10, device="cpu"):    
+def generate_images(model: GenerativeModel, epoch, n_samples=9, device="cpu"):    
     ### Generate random samples
     model.eval()
     x_rec = model.sample(n_samples, device)
@@ -330,7 +365,7 @@ def generate_images(model: GenerativeModel, epoch, n_samples=10, device="cpu"):
     # plt.show()
 
 
-def generate_interpolated(model: GenerativeModel, epoch, n_samples=10, device='cpu'):
+def generate_interpolated(model: GenerativeModel, epoch, n_samples=9, device='cpu'):
     ### Generate random samples
     model.eval()
     n_iterpolations = 50 # Number of intermediate steps between init and final
@@ -421,35 +456,13 @@ def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_ep
 
     return losses_list
 
-# We use Adam optimizer which is tipically used in VAEs and GANs
-
-
-tr = transforms.Compose([
-    transforms.Resize((32, 32)),
-    transforms.ToTensor(),  # convert image to pytorch tensor [0..,1]
-])
-
-
-# Initialize the dataset
-train_faces = FacesDB(data_path+'faces/face_ims_64x64.mat', tr)
-
-# Class to iterate over the dataset (DataLoader)
-train_loader = torch.utils.data.DataLoader(dataset=train_faces,
-                                           batch_size=128,
-                                           shuffle=True)
-
-
-test_faces = FacesDB(data_path+'faces/face_ims_64x64.mat',tr) # NOTE: These are the same as the train faces
-test_loader = torch.utils.data.DataLoader(dataset=test_faces,
-                                          batch_size=10,
-                                          shuffle=False)
-
 
 # Train the model
 if train_vae:
-    vae = VAE(32)
+    vae = VAE(out_features=output_resolution)
     kl_weight = 0.001
     learning_rate = .001
+    # We use Adam optimizer which is tipically used in VAEs and GANs
     optimizer = torch.optim.Adam(vae.parameters(),lr = learning_rate, weight_decay=1e-5)
     
     print("#################### Training VAE ####################")
@@ -500,7 +513,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.base_channels = base_channels
         self.in_features = in_features
-        self.decoder = Decoder(in_features,base_channels)
+        self.decoder = Decoder(out_features=in_features, base_channels=base_channels)
 
     # Generate an image from vector z
     def forward(self,z):
@@ -514,7 +527,7 @@ class Generator(nn.Module):
   
 
 class GAN(nn.Module, GenerativeModel):
-    def __init__(self, in_features, base_channels=16):
+    def __init__(self, in_features=32, base_channels=16):
         super(GAN, self).__init__()
         self.discriminator = Discriminator(base_channels=base_channels)
         self.generator = Generator(in_features, base_channels=base_channels)
@@ -594,7 +607,7 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
 
         # Visualize the images every two training epochs
         if epoch % plot_every == 0:
-            n_samples = 10
+            n_samples = num_val_images # NOTE: num_val_images is a global variable
             generate_images(gan, epoch, n_samples, device=device)
             generate_interpolated(gan, epoch, n_samples, device=device)
 
@@ -612,7 +625,7 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
 # Train the model
 if train_gan:
     # Define Geneartor and Discriminator networks
-    gan = GAN(in_features = 32)
+    gan = GAN(in_features=output_resolution)
 
     #Initialize indepdent optimizer for both networks
     learning_rate = .0005
