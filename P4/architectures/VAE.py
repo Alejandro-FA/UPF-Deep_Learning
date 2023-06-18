@@ -23,7 +23,7 @@ class VAE(nn.Module, GenerativeModel):
         return z_mean, z_log_var
 
     # function to generate a random sample z given mu and sigma
-    def sample_z(self, z_mean, z_log_var):  #  NOTE: Reparametrization trick
+    def sample_z(self, z_mean, z_log_var):  # NOTE: Reparametrization trick
         z_std = z_log_var.mul(0.5).exp()
         samples_unit_normal = torch.randn_like(z_mean)
         samples_z = samples_unit_normal*z_std + z_mean

@@ -29,7 +29,7 @@ from math import sqrt
 import imageio
 import numpy as np
 import math
-from architectures import *
+from architectures import GenerativeModel, GAN, VAE
 
 
 # # Mount Google Drive
@@ -38,12 +38,14 @@ from architectures import *
 # %cd "/content/drive/DeepLearning/P4/"
 
 # All the data will be loaded from the provided file in Data/mnist.t
-data_path = 'P4/Data/'
-results_path = 'P4/Results/'
+data_path = 'P4/Data'
+results_path = 'P4/Results'
+output_images_path = results_path + '/images'
 
 save_figure = True  # Whether to save figures or not # FIXME: not used
-num_epochs = 3000
-plot_every = 300 # During training, plot results every {plot_every} epochs
+show_figure = False
+num_epochs = 40
+plot_every = 10 # During training, plot results every {plot_every} epochs
 
 dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
 output_resolution = 32
@@ -81,7 +83,7 @@ class FacesDB(torch.utils.data.Dataset):
 """Create a `DataLoader` and visualize one image of the dataset"""
 if explore_dataset:
     tr_exploration = transforms.Compose([transforms.ToTensor(), ])
-    faces_db = FacesDB(data_path + 'faces/face_ims_64x64.mat', tr_exploration)
+    faces_db = FacesDB(data_path + '/faces/face_ims_64x64.mat', tr_exploration)
     exploration_loader = torch.utils.data.DataLoader(
         dataset=faces_db, batch_size=256, shuffle=True, pin_memory=True)
     
@@ -103,7 +105,7 @@ tr_training = transforms.Compose([
 
 
 # Initialize the dataset
-train_faces = FacesDB(data_path+'faces/face_ims_64x64.mat', tr_training)
+train_faces = FacesDB(data_path+'/faces/face_ims_64x64.mat', tr_training)
 
 # Class to iterate over the dataset (DataLoader)
 train_loader = torch.utils.data.DataLoader(
@@ -126,7 +128,7 @@ device = mtw.get_torch_device(use_gpu=True, debug=True)
 torch.manual_seed(10)
 
 # Create an IO manager instance to save and load model checkpoints
-iomanager = mtw.IOManager(storage_dir=results_path + 'models/') # FIXME: not used
+iomanager = mtw.IOManager(storage_dir=results_path + '/models/') # FIXME: not used
         
 
 """# Ex. 1
@@ -193,6 +195,12 @@ def plot_reconstructed_images(vae, test_loader, epoch):
     image_grid = make_grid(x_rec.cpu(), nrow=test_loader.batch_size, padding=1)
     axes[1].imshow(image_grid.permute(1, 2, 0).detach().numpy())
     axes[1].axis("off")
+
+    if save_figure:
+        plt.savefig(f"{output_images_path}/{vae.name}/reconstructed_images_e{epoch}.png", dpi=300)
+
+    if not show_figure:
+        plt.close()
     # plt.show()
 
 
@@ -207,6 +215,12 @@ def generate_images(model: GenerativeModel, epoch, n_samples=9, device="cpu"):
     plt.title(f"Generated images at epoch {epoch}", fontsize=14, fontweight="bold")
     image_grid = make_grid(x_rec.cpu(), nrow=math.ceil(sqrt(n_samples)), padding=padding)
     plt.imshow(image_grid.permute(1,2,0).detach().numpy())
+
+    if save_figure:
+        plt.savefig(f"{output_images_path}/{model.name}/{model.name}_generated_images_e{epoch}.png", dpi=300)
+
+    if not show_figure:
+        plt.close()
     # plt.show()
 
 
@@ -235,7 +249,7 @@ def generate_interpolated(model: GenerativeModel, epoch, n_samples=9, device='cp
     interpolation_images += interpolation_images[::-1]
 
     # Generate and visualize a give showing the interpolation results.
-    imname = f"{results_path}/interpolations/{model.name}/ck_epoch_{epoch}.gif"
+    imname = f"{output_images_path}/interpolations/{model.name}/ck_e{epoch}.gif"
     fps = 50
     duration = (1000 * 1/fps)
     imageio.mimsave(imname, interpolation_images, duration = duration)
@@ -296,7 +310,7 @@ def train_VAE(vae: VAE, train_loader, test_loader, optimizer, kl_weight=0.001, n
               .format(epoch, num_epochs, i + 1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
         losses_list.append(rec_loss_avg / nBatches)
         # save trained model
-        torch.save(vae.state_dict(), f"{results_path}{vae.name}_ck.ckpt")
+        torch.save(vae.state_dict(), f"{results_path}/{vae.name}_ck.ckpt")
 
     return losses_list
 
@@ -311,7 +325,7 @@ if train_vae:
     
     print("#################### Training VAE ####################")
     loss_list = train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=kl_weight,
-                        num_epochs=num_epochs, device=device)
+                        num_epochs=num_epochs, device=device, plot_every=plot_every)
 
     figure = plt.figure(figsize=(5, 5))
     plt.title("VAE loss evolution", fontsize=14, fontweight="bold")
@@ -319,6 +333,11 @@ if train_vae:
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.grid()
+    if save_figure:
+        plt.savefig(f"{results_path}/vae_loss_evolution.png", dpi=300)
+        
+    if not show_figure:
+        plt.close()
 
 
 """# Ex. 2
@@ -360,7 +379,7 @@ def train_GAN(gan: GAN, train_loader, optimizer_gen, optim_disc,
     disc_losses_list = []
     gen_losses_list = []
     
-    controller = TrainController(loss_threshold=0.01, train_gen_every=10)
+    controller = TrainController(loss_threshold=0.05, train_gen_every=10)
     update_generator = False
     
     # Iterate over epochs
@@ -424,7 +443,7 @@ def train_GAN(gan: GAN, train_loader, optimizer_gen, optim_disc,
         # Save model
         disc_losses_list.append(disc_loss_avg / nBatches)
         gen_losses_list.append(gen_loss_avg / nBatches)
-        torch.save(gan.state_dict(), f"{results_path}{gan.name}_ck.ckpt")
+        torch.save(gan.state_dict(), f"{results_path}/{gan.name}_ck.ckpt")
           
     return disc_losses_list, gen_losses_list
 
@@ -454,6 +473,13 @@ if train_gan:
     plt.ylabel("Loss")
     plt.grid()
     plt.legend()
+    
+    if save_figure:
+        plt.savefig(f"{results_path}/gan_loss_evolution.png", dpi=300)
+
+    if not show_figure:
+        plt.close()
 
 
-plt.show()
+if show_figure: 
+    plt.show()

@@ -11,7 +11,7 @@ class Discriminator(nn.Module):
     def __init__(self, base_channels=16):
         super(Discriminator, self).__init__()
         # last fully connected layer acts as a a binary classifier
-        self.classifier = Encoder(1,base_channels)
+        self.classifier = Encoder(1, base_channels, is_gan = True)
 
     # Forward pass obtaining the discriminator probability
     def forward(self,x):
@@ -25,7 +25,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.base_channels = base_channels
         self.in_features = in_features
-        self.decoder = Decoder(out_features=in_features, base_channels=base_channels)
+        self.decoder = Decoder(out_features=in_features, base_channels=base_channels, is_gan = True)
 
     # Generate an image from vector z
     def forward(self,z):
