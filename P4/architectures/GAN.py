@@ -104,6 +104,7 @@ class GAN(nn.Module, GenerativeModel):
         super(GAN, self).__init__()
         self.discriminator = Discriminator(base_channels=base_channels)
         self.generator = Generator(in_features, base_channels=base_channels)
+        self.weights_init()
 
     def get_latent_space(self, n_samples, device='cpu'):
         return torch.randn((n_samples, self.generator.in_features)).to(device)
@@ -114,7 +115,17 @@ class GAN(nn.Module, GenerativeModel):
     @property
     def name(self):
         return "GAN"
-
+    
+    def weights_init(self):
+        """Initialize weights according to UNSUPERVISED REPRESENTATION LEARNING
+        WITH DEEP CONVOLUTIONAL GENERATIVE ADVERSARIAL NETWORKS
+        """
+        classname = self.__class__.__name__
+        if classname.find('Conv') != -1:
+            nn.init.normal_(self.weight.data, 0.0, 0.02)
+        elif classname.find('BatchNorm') != -1:
+            nn.init.normal_(self.weight.data, 1.0, 0.02)
+            nn.init.constant_(self.bias.data, 0)
 
 
 

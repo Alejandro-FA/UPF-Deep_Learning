@@ -360,7 +360,7 @@ if train_vae:
 class TrainController:
     def __init__(self, loss_threshold:float=0.01, train_gen_every:int=2) -> None:
         assert(train_gen_every >= 2)
-        self.counter = 0
+        self.counter = 1
         self.train_gen_every = train_gen_every
         self.loss_threshold = loss_threshold
     
@@ -421,10 +421,11 @@ def train_GAN(gan: GAN, train_loader, optimizer_gen, optim_disc,
             disc_loss_avg += disc_loss.cpu().item()
             gen_loss_avg += gen_loss.cpu().item()
 
-            nBatches += 1
-            if (i+1) % 200 == 0:
-                print ('Training {}. Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}' 
-                       .format(epoch, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches))
+            nBatches += 1        
+            # if (i+1) % 200 == 0:
+            #     trained_module = "generator" if update_generator else "discriminator"
+            #     print('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}, Trained module: {}' 
+            #            .format(epoch, num_epochs, i+1, total_step, gen_loss.cpu().item(), disc_loss.cpu().item(), trained_module))
                 
         # Visualize the images every two training epochs
         if epoch % plot_every == 0:
