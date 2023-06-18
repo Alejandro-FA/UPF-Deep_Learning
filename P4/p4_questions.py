@@ -29,7 +29,7 @@ from math import sqrt
 import imageio
 import numpy as np
 import math
-from architectures import GenerativeModel, GAN, VAE
+from architectures import GenerativeModel, VAE, GAN
 
 
 # # Mount Google Drive
@@ -47,7 +47,13 @@ show_figure = False
 num_epochs = 2000
 plot_every = 200 # During training, plot results every {plot_every} epochs
 
-dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
+"""# Our global variables"""
+device = mtw.get_torch_device(use_gpu=True, debug=True)
+torch.manual_seed(10)
+if device == "gpu":
+    dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
+else:
+    dataloader_workers = 0
 output_resolution = 32
 num_val_images = 25
 
@@ -101,17 +107,18 @@ if explore_dataset:
 tr_training = transforms.Compose([
     transforms.Resize((output_resolution, output_resolution)),
     transforms.ToTensor(),  # convert image to pytorch tensor [0..,1]
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    transforms.Normalize((0.5), (0.5)),
 ])
 
 
 # Initialize the dataset
 train_faces = FacesDB(data_path+'/faces/face_ims_64x64.mat', tr_training)
 
+train_batch_size = math.ceil(len(train_faces) / 20) # TODO: Modify according to PC used
 # Class to iterate over the dataset (DataLoader)
 train_loader = torch.utils.data.DataLoader(
     dataset=train_faces,
-    batch_size = math.ceil(len(train_faces) / 20), # TODO: Modify according to PC used
+    batch_size = train_batch_size, 
     shuffle=True,
     pin_memory=True,
     num_workers=dataloader_workers,
@@ -123,10 +130,6 @@ test_loader = torch.utils.data.DataLoader(
     shuffle=False
 )
 
-
-"""# Our global variables"""
-device = mtw.get_torch_device(use_gpu=True, debug=True)
-torch.manual_seed(10)
 
 # Create an IO manager instance to save and load model checkpoints
 iomanager = mtw.IOManager(storage_dir=results_path + '/models/') # FIXME: not used
