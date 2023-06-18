@@ -29,7 +29,7 @@ from math import sqrt
 import imageio
 import numpy as np
 import math
-from abc import ABC, abstractmethod
+from architectures import *
 
 
 # # Mount Google Drive
@@ -47,7 +47,7 @@ plot_every = 300 # During training, plot results every {plot_every} epochs
 
 dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
 output_resolution = 32
-num_val_images = 9
+num_val_images = 25
 
 explore_dataset = False
 train_vae = False
@@ -108,7 +108,7 @@ train_faces = FacesDB(data_path+'faces/face_ims_64x64.mat', tr_training)
 # Class to iterate over the dataset (DataLoader)
 train_loader = torch.utils.data.DataLoader(
     dataset=train_faces,
-    batch_size=math.ceil(len(train_faces) / 9), # TODO: Modify according to PC used
+    batch_size = math.ceil(len(train_faces) / 20), # TODO: Modify according to PC used
     shuffle=True,
     pin_memory=True,
     num_workers=dataloader_workers,
@@ -127,30 +127,7 @@ torch.manual_seed(10)
 
 # Create an IO manager instance to save and load model checkpoints
 iomanager = mtw.IOManager(storage_dir=results_path + 'models/') # FIXME: not used
-
-class GenerativeModel(ABC):
-    """Interface for generative models
-    """
-    def sample(self, n_samples, device='cpu'):
-        """Sample a set of images from random vectors z
-        """
-        z = self.get_latent_space(n_samples, device)
-        return self.decode(z)
-
-    @abstractmethod
-    def get_latent_space(self, n_samples, device='cpu'):
-        pass
         
-    @abstractmethod
-    def decode(self, z):
-        pass
-
-    @property
-    @abstractmethod
-    def name(self):
-        pass
-        
-
 
 """# Ex. 1
 
@@ -168,139 +145,6 @@ class GenerativeModel(ABC):
 
 ## Sol. 1
 """
-# 1.
-
-# Convolution + BatchNormnalization + ReLU block for the encoder
-
-
-class ConvBNReLU(nn.Module):
-    def __init__(self, in_channels, out_channels, pooling=False):
-        super(ConvBNReLU, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3,
-                              padding=1)
-        self.bn = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU(inplace=True)
-
-        self.pool = None
-        if pooling:
-            self.pool = nn.AvgPool2d(2, 2)
-
-    def forward(self, x):
-        if (self.pool):
-            out = self.pool(x)
-        else:
-            out = x
-        out = self.relu(self.bn(self.conv(out)))
-        return out
-
-#  BatchNormnalization + ReLU block + Convolution for the decoder
-
-
-class BNReLUConv(nn.Module):
-    def __init__(self, in_channels, out_channels, pooling=False):
-        super(BNReLUConv, self).__init__()
-        self.bn = nn.BatchNorm2d(in_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3,
-                              padding=1)
-
-        self.pool = None
-        if pooling:
-            self.pool = nn.UpsamplingNearest2d(scale_factor=2)
-
-    def forward(self, x):
-        out = self.relu(self.bn(x))
-        if (self.pool):
-            out = self.pool(out)
-        out = self.conv(out)
-        return out
-
-# Encoder definition with 3 COnv-BN-ReLU blocks and fully-connected layer
-
-
-class Encoder(nn.Module):
-    def __init__(self, out_features, base_channels=16):
-        super(Encoder, self).__init__()
-        self.layer1 = ConvBNReLU(1, base_channels, pooling=False)
-        self.layer2 = ConvBNReLU(base_channels, base_channels*2, pooling=True)
-        self.layer3 = ConvBNReLU(
-            base_channels*2, base_channels*4, pooling=True)
-        self.fc = nn.Linear(8*8*base_channels*4, out_features)
-
-    def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        return self.fc(out.view(x.shape[0], -1))
-
-# Decoder definition with a fully-connected layer and 3 BN-ReLU-COnv blocks and
-
-
-class Decoder(nn.Module):
-    def __init__(self, out_features, base_channels=16):
-        super(Decoder, self).__init__()
-        self.base_channels = base_channels
-        self.fc = nn.Linear(out_features, 8 * 8 * base_channels * 4)
-        self.layer3 = BNReLUConv(
-            base_channels*4, base_channels * 2, pooling=True)
-        self.layer2 = BNReLUConv(base_channels * 2, base_channels, pooling=True)
-        self.layer1 = BNReLUConv(base_channels, 1, pooling=False)
-
-    def forward(self, x):
-        out = self.fc(x)
-        out = out.view(x.shape[0], self.base_channels * 4, 8, 8)
-        out = self.layer3(out)
-        out = self.layer2(out)
-        out = self.layer1(out)
-        return torch.sigmoid(out)
-
-
-class VAE(nn.Module, GenerativeModel):
-    def __init__(self, out_features=32, base_channels=16):
-        super(VAE, self).__init__()
-        # Initialize the encoder and decoder using a dimensionality out_features for the vector z
-        self.out_features = out_features
-        self.encoder = Encoder(out_features * 2, base_channels)
-        self.decoder = Decoder(out_features, base_channels)
-
-    # function to obtain the mu and sigma of z for a samples x
-    def encode(self, x):
-        aux = self.encoder(x)
-        # get z mean
-        z_mean = aux[:, 0:self.out_features]
-        # get z variance
-        z_log_var = aux[:, self.out_features::]
-        return z_mean, z_log_var
-
-    # function to generate a random sample z given mu and sigma
-    def sample_z(self, z_mean, z_log_var):  #  NOTE: Reparametrization trick
-        z_std = z_log_var.mul(0.5).exp()
-        samples_unit_normal = torch.randn_like(z_mean)
-        samples_z = samples_unit_normal*z_std + z_mean
-        return samples_z
-
-    # (1) encode a sample
-    # (2) obtain a random vector z from mu and sigma
-    # (3) Reconstruct the image using the decoder
-    def forward(self, x):
-        z_mean, z_log_var = self.encode(x)
-        samples_z = self.sample_z(z_mean, z_log_var)
-        x_rec = self.decoder(samples_z)
-        return x_rec, z_mean, z_log_var
-    
-    
-    def get_latent_space(self, n_samples, device='cpu'):
-        z = torch.randn((n_samples, self.out_features)).to(device)
-        return z
-    
-    def decode(self, z):
-        return self.decoder(z)
-    
-    @property
-    def name(self):
-        return 'VAE'
-    
-    
 
 # Training
 # Kullback-Leibler regularization computation
@@ -358,9 +202,10 @@ def generate_images(model: GenerativeModel, epoch, n_samples=9, device="cpu"):
     x_rec = model.sample(n_samples, device)
 
     # Show synthetic images
-    plt.figure(figsize= (n_samples + 1, n_samples + 1))
+    padding = 0
+    plt.figure(figsize= (n_samples + padding, n_samples + padding))
     plt.title(f"Generated images at epoch {epoch}", fontsize=14, fontweight="bold")
-    image_grid = make_grid(x_rec.cpu(), nrow=n_samples, padding=1)
+    image_grid = make_grid(x_rec.cpu(), nrow=math.ceil(sqrt(n_samples)), padding=padding)
     plt.imshow(image_grid.permute(1,2,0).detach().numpy())
     # plt.show()
 
@@ -400,7 +245,7 @@ def generate_interpolated(model: GenerativeModel, epoch, n_samples=9, device='cp
 
 
 # Train function
-def train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=0.001, num_epochs=10, device='cpu', plot_every=2):
+def train_VAE(vae: VAE, train_loader, test_loader, optimizer, kl_weight=0.001, num_epochs=10, device='cpu', plot_every=2):
     vae.to(device)
     vae.train()  # Set the model in train mode
     total_step = len(train_loader)
@@ -493,73 +338,23 @@ if train_vae:
 ## Sol. 2
 """
 
-# Discriminator similar to VAE encoder
-class Discriminator(nn.Module):
-    def __init__(self, base_channels=16):
-        super(Discriminator, self).__init__()
-        # last fully connected layer acts as a a binary classifier
-        self.classifier = Encoder(1,base_channels)
-
-    # Forward pass obtaining the discriminator probability
-    def forward(self,x):
-        out = self.classifier(x)
-        # use sigmoid to get the real/fake image probability
-        return torch.sigmoid(out)
-
-# Generator is defined as VAE decoder
-class Generator(nn.Module):
-    def __init__(self, in_features, base_channels=16):
-        super(Generator, self).__init__()
-        self.base_channels = base_channels
-        self.in_features = in_features
-        self.decoder = Decoder(out_features=in_features, base_channels=base_channels)
-
-    # Generate an image from vector z
-    def forward(self,z):
-        return torch.sigmoid(self.decoder(z))
-
-    # FIXME: remove if (nan)
-    # # Sample a set of images from random vectors z
-    # def sample(self,n_samples=256,device='cpu'):
-    #     samples_unit_normal = torch.randn((n_samples,self.in_features)).to(device)
-    #     return self.decoder(samples_unit_normal)
-  
-
-class GAN(nn.Module, GenerativeModel):
-    def __init__(self, in_features=32, base_channels=16):
-        super(GAN, self).__init__()
-        self.discriminator = Discriminator(base_channels=base_channels)
-        self.generator = Generator(in_features, base_channels=base_channels)
-
-    def get_latent_space(self, n_samples, device='cpu'):
-        return torch.randn((n_samples, self.generator.in_features)).to(device)
-    
-    def decode(self, z):
-        return self.generator.decoder(z)
-    
-    @property
-    def name(self):
-        return "GAN"
-
-
 class TrainController:
-    def __init__(self, loss_threshold=0.01, train_gen_every=5) -> None:
+    def __init__(self, loss_threshold:float=0.01, train_gen_every:int=2) -> None:
+        assert(train_gen_every >= 2)
         self.counter = 0
         self.train_gen_every = train_gen_every
         self.loss_threshold = loss_threshold
     
-    def is_train_generator(self, disc_loss) -> bool:
+    def is_train_generator(self, disc_loss:float) -> bool:
         self.counter += 1
         return self.counter % self.train_gen_every == 0 or disc_loss < self.loss_threshold
 
 
 # GAN Train function. We have a generator and discriminator models and their respective optimizers.
-def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
+def train_GAN(gan: GAN, train_loader, optimizer_gen, optim_disc,
               num_epochs=10, device='cpu', plot_every=2):
     gan.train()
     gan = gan.to(device)
-    gen = gan.generator
-    disc = gan.discriminator
 
     total_step = len(train_loader)
     disc_losses_list = []
@@ -585,8 +380,8 @@ def train_GAN(gan, train_loader, optimizer_gen, optim_disc,
             fake_images = gan.sample(n_images, device=device)
             
             # Use the discriminator to obtain the probabilties for real and generate imee
-            prob_real = disc(real_images)
-            prob_fake = disc(fake_images)
+            prob_real = gan.discriminator(real_images)
+            prob_fake = gan.discriminator(fake_images)
             
             # Generator loss
             gen_loss = -torch.log(prob_fake).mean()
