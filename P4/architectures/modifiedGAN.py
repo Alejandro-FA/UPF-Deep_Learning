@@ -10,93 +10,64 @@ from .GenerativeModel import *
 # Decoder definition with a fully-connected layer and 3 BN-ReLU-COnv blocks and
 
 
-
 # Discriminator similar to VAE encoder
 class Discriminator(nn.Module):
-    def __init__(self, out_features=1, base_channels=16):
+    def __init__(self, out_features=1, base_channels=32, image_channels=1):
         super(Discriminator, self).__init__()
-        self.activation = nn.LeakyReLU(0.2, inplace=True)
-        
-        self.layer1 = ConvBNReLU(
-            1, 
-            base_channels, 
-            activation=self.activation, 
-            pooling=False,
-            use_bn=True,
-            drop_ratio=0.5
+        self.main = nn.Sequential(
+            # input is ``(image_channels) x 64 x 64``
+            nn.Conv2d(image_channels, base_channels, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. ``(ndf) x 32 x 32``
+            nn.Conv2d(base_channels, base_channels * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(base_channels * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. ``(ndf*2) x 16 x 16``
+            nn.Conv2d(base_channels * 2, base_channels * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(base_channels * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. ``(ndf*4) x 8 x 8``
+            nn.Conv2d(base_channels * 4, base_channels * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(base_channels * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. ``(ndf*8) x 4 x 4``
+            nn.Conv2d(base_channels * 8, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid()
         )
-        
-        self.layer2 = ConvBNReLU(
-            base_channels, 
-            base_channels * 2, 
-            activation=self.activation, 
-            pooling=True,
-            use_bn=True,
-            drop_ratio=0.5
-        )
-        
-        self.layer3 = ConvBNReLU(
-            base_channels * 2,
-            base_channels * 4, 
-            activation=self.activation, 
-            pooling=True,
-            use_bn=True,
-            drop_ratio=0.5
-        )
-        
-        self.fc = nn.Linear(8 * 8 * base_channels * 4, out_features)
 
-    def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.fc(out.view(x.shape[0], -1))
-        return torch.sigmoid(out)
+    def forward(self, input):
+        return self.main(input)
 
 
 # Generator is defined as VAE decoder
 class Generator(nn.Module):
-    def __init__(self, in_features, base_channels=16):
+    def __init__(self, in_features, image_channels = 1, base_channels=32):
         super(Generator, self).__init__()
-        self.base_channels = base_channels
-        self.in_features = in_features
-        self.activation = nn.ReLU(inplace=True)
-        self.fc = nn.Linear(in_features, 8 * 8 * base_channels * 4)
-        
-        self.layer3 = BNReLUConv(
-            base_channels * 4,
-            base_channels * 2,
-            activation=self.activation,
-            pooling=True,
-            use_bn=True,
-            drop_ratio=0.5
+        self.main = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d( in_features, base_channels * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(base_channels * 8),
+            nn.ReLU(True),
+            # state size. ``(base_channels*8) x 4 x 4``
+            nn.ConvTranspose2d(base_channels * 8, base_channels * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(base_channels * 4),
+            nn.ReLU(True),
+            # state size. ``(base_channels*4) x 8 x 8``
+            nn.ConvTranspose2d( base_channels * 4, base_channels * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(base_channels * 2),
+            nn.ReLU(True),
+            # state size. ``(base_channels*2) x 16 x 16``
+            nn.ConvTranspose2d( base_channels * 2, base_channels, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(base_channels),
+            nn.ReLU(True),
+            # state size. ``(base_channels) x 32 x 32``
+            nn.ConvTranspose2d( base_channels, image_channels, 4, 2, 1, bias=False),
+            nn.Tanh()
+            # state size. ``(nc) x 64 x 64``
         )
-        
-        self.layer2 = BNReLUConv(
-            base_channels * 2, 
-            base_channels, 
-            activation=self.activation, 
-            pooling=True,
-            use_bn=True,
-            drop_ratio=0.5
-        )
-        
-        self.layer1 = BNReLUConv(
-            base_channels,
-            1,
-            activation=self.activation,
-            pooling=False,
-            use_bn=True,
-            drop_ratio=0.5
-        ) 
 
     def forward(self, x):
-        out = self.fc(x)
-        out = out.view(x.shape[0], self.base_channels * 4, 8, 8)
-        out = self.layer3(out)
-        out = self.layer2(out)
-        out = self.layer1(out)
-        return nn.Tanh(out) # TODO: change to tanh?
+        return self.main(x)
   
 
 class GAN(nn.Module, GenerativeModel):

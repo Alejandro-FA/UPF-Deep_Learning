@@ -101,6 +101,7 @@ if explore_dataset:
 tr_training = transforms.Compose([
     transforms.Resize((output_resolution, output_resolution)),
     transforms.ToTensor(),  # convert image to pytorch tensor [0..,1]
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 ])
 
 
@@ -185,7 +186,7 @@ def plot_reconstructed_images(vae, test_loader, epoch):
     figure, axes = plt.subplots(2, 1, figsize=(test_loader.batch_size * 2 + 2, test_loader.batch_size + 1))
     figure.suptitle(f"Reconstructed images at epoch {epoch}", fontsize=14, fontweight="bold")
     
-    image_grid = make_grid(test_images.cpu(), nrow=test_loader.batch_size, padding=1)
+    image_grid = make_grid(test_images.cpu(), nrow=test_loader.batch_size, padding=1, normalize = True)
     
     axes[0].imshow(image_grid.permute(1, 2, 0).detach().numpy())
     axes[0].set_title('Original Images')
