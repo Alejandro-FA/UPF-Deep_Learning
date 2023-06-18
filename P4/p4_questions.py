@@ -44,8 +44,8 @@ output_images_path = results_path + '/images'
 
 save_figure = True  # Whether to save figures or not # FIXME: not used
 show_figure = False
-num_epochs = 40
-plot_every = 10 # During training, plot results every {plot_every} epochs
+num_epochs = 2000
+plot_every = 200 # During training, plot results every {plot_every} epochs
 
 dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
 output_resolution = 32
@@ -366,7 +366,7 @@ class TrainController:
     
     def is_train_generator(self, disc_loss:float) -> bool:
         self.counter += 1
-        return self.counter % self.train_gen_every == 0 or disc_loss < self.loss_threshold
+        return self.counter % self.train_gen_every == 0# or disc_loss < self.loss_threshold
 
 
 # GAN Train function. We have a generator and discriminator models and their respective optimizers.
@@ -379,7 +379,7 @@ def train_GAN(gan: GAN, train_loader, optimizer_gen, optim_disc,
     disc_losses_list = []
     gen_losses_list = []
     
-    controller = TrainController(loss_threshold=0.05, train_gen_every=10)
+    controller = TrainController(loss_threshold=0.05, train_gen_every=3)
     update_generator = False
     
     # Iterate over epochs
@@ -453,10 +453,10 @@ if train_gan:
     gan = GAN(in_features=output_resolution)
 
     #Initialize indepdent optimizer for both networks
-    learning_rate_gen = .0005
-    learning_rate_disc = .0005 # FIXME: What about making the discriminator learn quicker
-    optimizer_gen = torch.optim.Adam(gan.generator.parameters(), lr = learning_rate_gen, weight_decay=1e-5)
-    optimizer_disc = torch.optim.Adam(gan.discriminator.parameters(), lr = learning_rate_disc, weight_decay=1e-5)
+    learning_rate_gen = .0002
+    learning_rate_disc = .0002 # FIXME: What about making the discriminator learn quicker
+    optimizer_gen = torch.optim.Adam(gan.generator.parameters(), lr = learning_rate_gen, weight_decay=1e-5, betas=(0.5, 0.999))
+    optimizer_disc = torch.optim.Adam(gan.discriminator.parameters(), lr = learning_rate_disc, weight_decay=1e-5, betas=(0.5, 0.999))
 
     print("\n\n#################### Training GAN ####################")
     # Train the GAN

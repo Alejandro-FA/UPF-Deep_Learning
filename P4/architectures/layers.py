@@ -4,13 +4,12 @@
 import torch.nn as nn
 
 
-# Convolution + BatchNormnalization + ReLU block for the encoder
-
 class ConvBNReLU(nn.Module):
-    def __init__(self, in_channels, out_channels, pooling=False, use_bn=True):
+    def __init__(self, in_channels, out_channels, activation=nn.ReLU(inplace=True), pooling=False, use_bn=True, drop_ratio=0):
         super(ConvBNReLU, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
-        self.relu = nn.ReLU(inplace=True)
+        self.activation_fun = activation
+        self.dropout = nn.Dropout(drop_ratio)
 
         self.bn = None
         if use_bn:
@@ -24,17 +23,17 @@ class ConvBNReLU(nn.Module):
         out = self.pool(x) if self.pool else x
         out = self.conv(out)
         out = self.bn(out) if self.bn else out
-        out = self.relu(out)
+        out = self.activation_fun(out)
+        out = self.dropout(out)
         return out
 
 
-#  BatchNormnalization + ReLU block + Convolution for the decoder
-
 class BNReLUConv(nn.Module):
-    def __init__(self, in_channels, out_channels, pooling=False, use_bn = True):
+    def __init__(self, in_channels, out_channels, activation=nn.ReLU(inplace=True), pooling=False, use_bn=True, drop_ratio=0):
         super(BNReLUConv, self).__init__()
-        self.relu = nn.ReLU(inplace=True)
+        self.activation_fun = activation
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+        self.dropout = nn.Dropout(drop_ratio)
 
         self.bn = None
         if use_bn:
@@ -46,7 +45,8 @@ class BNReLUConv(nn.Module):
 
     def forward(self, x):
         out = self.bn(x) if self.bn else x
-        out = self.relu(out)
+        out = self.activation_fun(out)
+        out = self.dropout(out)
         out = self.pool(out) if self.pool else out
         out = self.conv(out)
         return out
