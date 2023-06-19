@@ -49,11 +49,12 @@ plot_every = 200 # During training, plot results every {plot_every} epochs
 
 """# Our global variables"""
 device = mtw.get_torch_device(use_gpu=True, debug=True)
-# torch.manual_seed(10)
+torch.manual_seed(10)
 if device != torch.device("cpu"):
     dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
 else:
     dataloader_workers = 0
+print(f"The dataloader will use {dataloader_workers} parallel workers.")
 output_resolution = 32
 num_val_images = 25
 
@@ -106,14 +107,14 @@ if explore_dataset:
 tr_training = transforms.Compose([
     transforms.Resize((output_resolution, output_resolution)),
     transforms.ToTensor(),  # convert image to pytorch tensor [0..,1]
-    # transforms.Normalize((0.5), (0.5)), # NOTE: Darkens the images a lot
+    # transforms.Normalize(mean=0.5, std=0.5), # NOTE: Darkens the images a lot
 ])
 
 
 # Initialize the dataset
 train_faces = FacesDB(data_path+'/faces/face_ims_64x64.mat', tr_training)
-
 train_batch_size = math.ceil(len(train_faces) / 20) # TODO: Modify according to PC used
+
 # Class to iterate over the dataset (DataLoader)
 train_loader = torch.utils.data.DataLoader(
     dataset=train_faces,
@@ -209,7 +210,6 @@ def plot_reconstructed_images(vae, test_loader, epoch):
 
 def generate_images(model: GenerativeModel, epoch, n_samples=9, device="cpu"):    
     ### Generate random samples
-    model.eval()
     x_rec = model.sample(n_samples, device)
 
     # Show synthetic images
@@ -229,7 +229,6 @@ def generate_images(model: GenerativeModel, epoch, n_samples=9, device="cpu"):
 
 def generate_interpolated(model: GenerativeModel, epoch, n_samples=9, device='cpu'):
     ### Generate random samples
-    model.eval()
     n_iterpolations = 50 # Number of intermediate steps between init and final
 
     # Sample a set of pairs z_init and z_final
@@ -263,8 +262,8 @@ def generate_interpolated(model: GenerativeModel, epoch, n_samples=9, device='cp
 
 # Train function
 def train_VAE(vae: VAE, train_loader, test_loader, optimizer, kl_weight=0.001, num_epochs=10, device='cpu', plot_every=2):
-    vae.to(device)
     vae.train()  # Set the model in train mode
+    vae.to(device)
     total_step = len(train_loader)
     losses_list = []
     kl_list = []
@@ -306,9 +305,11 @@ def train_VAE(vae: VAE, train_loader, test_loader, optimizer, kl_weight=0.001, n
 
         # Visualize the images every two training epochs
         if epoch % plot_every == 0:
+            vae.eval()
             plot_reconstructed_images(vae, test_loader, epoch)
             generate_images(vae, epoch, n_samples=test_loader.batch_size, device=device)
             generate_interpolated(vae, epoch, n_samples=test_loader.batch_size, device=device)
+            vae.train()
             
         print('Epoch [{}/{}], Step [{}/{}], Rec. Loss: {:.4f}, KL Loss: {:.4f}'
               .format(epoch, num_epochs, i + 1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
@@ -371,15 +372,27 @@ if train_vae:
 """
 
 class TrainController:
-    def __init__(self, loss_threshold:float=0.01, train_gen_every:int=2) -> None:
-        assert(train_gen_every >= 2)
-        self.counter = 1
-        self.train_gen_every = train_gen_every
-        self.loss_threshold = loss_threshold
+    def __init__(self, gan: GAN, train_disc_for=1, train_gen_for=1) -> None:
+        assert(train_disc_for >= 1 and train_gen_for >=1)
+        self.gan = gan
+        self.train_disc_for = train_disc_for
+        self.train_gen_for = train_gen_for
+        self.counter = 0
     
-    def is_train_generator(self, disc_loss:float) -> bool:
+    
+    def is_train_generator(self) -> bool:
+        train_generator = (self.counter % (self.train_gen_for + self.train_disc_for)) >= self.train_disc_for
+
+        # # NOTE: Do not use this, hurts performance
+        # if train_generator:
+        #     self.gan.generator.train()
+        #     self.gan.discriminator.eval()
+        # else:
+        #     self.gan.generator.eval()
+        #     self.gan.discriminator.train()
+
         self.counter += 1
-        return self.counter % self.train_gen_every == 0# or disc_loss < self.loss_threshold
+        return train_generator
 
 
 # GAN Train function. We have a generator and discriminator models and their respective optimizers.
@@ -392,11 +405,13 @@ def train_GAN(gan: GAN, train_loader, optimizer_gen, optim_disc,
     disc_losses_list = []
     gen_losses_list = []
     
-    controller = TrainController(loss_threshold=0.05, train_gen_every=3)
-    update_generator = False
+    controller = TrainController(gan, train_disc_for=1, train_gen_for=1)
     
     # Iterate over epochs
     for epoch in range(1, num_epochs + 1):
+        # Decide whether to train the generator or the discriminator for the next epoch
+        update_generator = controller.is_train_generator()
+
         # Iterate the dataset
         disc_loss_avg = 0
         gen_loss_avg = 0
@@ -442,17 +457,16 @@ def train_GAN(gan: GAN, train_loader, optimizer_gen, optim_disc,
                 
         # Visualize the images every two training epochs
         if epoch % plot_every == 0:
+            gan.eval()
             n_samples = num_val_images # NOTE: num_val_images is a global variable
             generate_images(gan, epoch, n_samples, device=device)
             generate_interpolated(gan, epoch, n_samples, device=device)
+            gan.train()
 
         # Print loss at the end of the epoch
         trained_module = "generator" if update_generator else "discriminator"
         print ('Epoch [{}/{}], Step [{}/{}], Gen. Loss: {:.4f}, Disc Loss: {:.4f}, Trained module: {}'
                        .format(epoch, num_epochs, i+1, total_step, gen_loss_avg / nBatches, disc_loss_avg / nBatches, trained_module))
-        
-        # Decide whether to train the generator or the discriminator for the next epoch
-        update_generator = controller.is_train_generator(disc_loss_avg / nBatches) 
     
         # Save model
         disc_losses_list.append(disc_loss_avg / nBatches)
