@@ -49,8 +49,8 @@ plot_every = 200 # During training, plot results every {plot_every} epochs
 
 """# Our global variables"""
 device = mtw.get_torch_device(use_gpu=True, debug=True)
-torch.manual_seed(10)
-if device == "gpu":
+# torch.manual_seed(10)
+if device != torch.device("cpu"):
     dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
 else:
     dataloader_workers = 0
@@ -106,7 +106,7 @@ if explore_dataset:
 tr_training = transforms.Compose([
     transforms.Resize((output_resolution, output_resolution)),
     transforms.ToTensor(),  # convert image to pytorch tensor [0..,1]
-    transforms.Normalize((0.5), (0.5)),
+    # transforms.Normalize((0.5), (0.5)), # NOTE: Darkens the images a lot
 ])
 
 
@@ -324,13 +324,13 @@ def train_VAE(vae: VAE, train_loader, test_loader, optimizer, kl_weight=0.001, n
 if train_vae:
     vae = VAE(out_features=output_resolution)
     kl_weight = 0.001
-    learning_rate = .001
+    learning_rate = .0005
     # We use Adam optimizer which is tipically used in VAEs and GANs
     optimizer = torch.optim.Adam(vae.parameters(),lr = learning_rate, weight_decay=1e-5)
 
     print("#################### Training VAE ####################")
     loss_list, kl_list = train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=kl_weight,
-                        num_epochs=num_epochs, device=device, plot_every=plot_every)
+                        num_epochs=100, device=device, plot_every=20)
 
     figure, axes = plt.subplots(1, 2, figsize=(10, 5))
     figure.suptitle("VAE loss and KL evolution", fontsize=14, fontweight="bold")
@@ -344,6 +344,7 @@ if train_vae:
     axes[1].set_ylabel("KL")
     axes[0].grid()
     axes[1].grid()
+
     if save_figure:
         plt.savefig(f"{results_path}/vae_loss_evolution.png", dpi=300)
 

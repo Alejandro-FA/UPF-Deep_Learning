@@ -9,7 +9,7 @@ class ConvBNReLU(nn.Module):
         super(ConvBNReLU, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
         self.activation_fun = activation
-        self.dropout = nn.Dropout(drop_ratio)
+        self.dropout = nn.Dropout2d(p=drop_ratio)
 
         self.bn = None
         if use_bn:
@@ -33,7 +33,7 @@ class BNReLUConv(nn.Module):
         super(BNReLUConv, self).__init__()
         self.activation_fun = activation
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
-        self.dropout = nn.Dropout(drop_ratio)
+        self.dropout = nn.Dropout2d(p=drop_ratio)
 
         self.bn = None
         if use_bn:
