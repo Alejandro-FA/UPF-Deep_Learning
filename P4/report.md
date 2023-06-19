@@ -109,7 +109,7 @@ At this point it was time to do some research. We found a well-known paper (Radf
 
 - Use the `LeakyReLU` activation function for the discriminator, instead of `ReLU`.
 
-- Use a `tanh` activation for the output of the generator instead of a `sigmoid`.
+- Use a `tanh` activation for the output of the generator instead of a `sigmoid`. This change has a very positive effect in avoiding numerical instability.
 
 - Use **strided convolutions** instead of pooling layers.
 
