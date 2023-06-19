@@ -60,9 +60,8 @@ num_val_images = 25
 explore_dataset = False
 train_vae = False
 train_gan = True
+
 """Create a data loader for the face images dataset"""
-
-
 class FacesDB(torch.utils.data.Dataset):
     # Initialization method for the dataset
     def __init__(self, dataDir=data_path+'/faces/face_ims_64x64.mat', transform=None):
@@ -268,6 +267,7 @@ def train_VAE(vae: VAE, train_loader, test_loader, optimizer, kl_weight=0.001, n
     vae.train()  # Set the model in train mode
     total_step = len(train_loader)
     losses_list = []
+    kl_list = []
     # Use mean-squared error to compare the original and reconstruct the images
     criterion = nn.MSELoss()
 
@@ -313,10 +313,11 @@ def train_VAE(vae: VAE, train_loader, test_loader, optimizer, kl_weight=0.001, n
         print('Epoch [{}/{}], Step [{}/{}], Rec. Loss: {:.4f}, KL Loss: {:.4f}'
               .format(epoch, num_epochs, i + 1, total_step, rec_loss_avg / nBatches, kl_loss_avg / nBatches))
         losses_list.append(rec_loss_avg / nBatches)
+        kl_list.append(kl_loss_avg / nBatches)
         # save trained model
         torch.save(vae.state_dict(), f"{results_path}/{vae.name}_ck.ckpt")
 
-    return losses_list
+    return losses_list, kl_list
 
 
 # Train the model
@@ -326,22 +327,29 @@ if train_vae:
     learning_rate = .001
     # We use Adam optimizer which is tipically used in VAEs and GANs
     optimizer = torch.optim.Adam(vae.parameters(),lr = learning_rate, weight_decay=1e-5)
-    
+
     print("#################### Training VAE ####################")
-    loss_list = train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=kl_weight,
+    loss_list, kl_list = train_VAE(vae, train_loader, test_loader, optimizer, kl_weight=kl_weight,
                         num_epochs=num_epochs, device=device, plot_every=plot_every)
 
-    figure = plt.figure(figsize=(5, 5))
-    plt.title("VAE loss evolution", fontsize=14, fontweight="bold")
-    plt.plot(loss_list, color="blue")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.grid()
+    figure, axes = plt.subplots(1, 2, figsize=(10, 5))
+    figure.suptitle("VAE loss and KL evolution", fontsize=14, fontweight="bold")
+    axes[0].set_title("Loss")
+    axes[1].set_title("KL")
+    axes[0].plot(loss_list, color="blue")
+    axes[1].plot(kl_list, color="red")
+    axes[0].set_xlabel("Epochs")
+    axes[0].set_ylabel("Loss")
+    axes[1].set_xlabel("Epochs")
+    axes[1].set_ylabel("KL")
+    axes[0].grid()
+    axes[1].grid()
     if save_figure:
         plt.savefig(f"{results_path}/vae_loss_evolution.png", dpi=300)
-        
+
     if not show_figure:
         plt.close()
+
 
 
 """# Ex. 2
