@@ -47,6 +47,8 @@ As we can see, the reconstruction loss deacreases until its convergence. However
 
 ## Generated and reconstructed images
 
+<span style="color:red">Discuss the different visualizations by analysing their relation with the evolution of the reconstruction loss and the KL regularization term.</span>
+
 The following images show the reconstructed images of the VAE for the 20th and 100th training epoch along with the original ones.
 
 As we can see, the quality of the faces significantly improve as the training iterations increase (as expected). Nevertheless, it is courious that the model with just 20 training epochs manages to somehow guess the orientation and shape of the target faces.
@@ -75,13 +77,15 @@ This table shows a final summary of the final values that were used to train our
 | KL weight                        | $0.01$                  |
 | Optimizer                            | $\text{Adam}$           |
 | Weight decay                         | $1\cdot 10^{-5}$       |
-| Loss function                        | $\text{MSE loss}$ |
+| Loss function                        | $\text{MSE loss}$ and $\text{KL loss}$|
 | Dropout                              | $0.2$                 |
 
 
 
 
 # Exercise 2
+
+<span style="color:red">Discuss the different visualizations by analysing their relation between their quality and the evolution of the discriminator and generator losses.</span>
 
 We started exercise 2 with the same naïve approach of copying the code used in the example notebook. With a minor modifications we were able to adapt it to the CK dataset. However, we immediately encountered one big problem, the training process was **very unstable**. This meant that after some training epochs, both the generator and discriminator loss encountered **numerical issues** (reaching a value of infinity). Furthermore, we also observed big spikes in the training loss and little signs of convergence (when the model was able to train for some epochs before crashing).
 
@@ -113,7 +117,7 @@ At this point it was time to do some research. We found a well-known paper (Radf
 
 - In the Adam optimizer, use `beta1=0.5` instead of the default `0.9` value.
 
-Additionally, we have also used dropout of `0.2` (<span style="color:red">Adjust this to final value used</span>) between each layer, since it is another good practice of Deep Learning that has shown good results in all of the previous practices of the subject).
+Additionally, we have also used dropout of `0.2`  (<span style="color:red">Adjust this to final value used</span>) between each layer of the Discriminator, since it is another good practice of Deep Learning that has shown good results in all of the previous practices of the subject). We do not use dropout in the Generator because we have read that it can hinder its performance.
 
 It should be noted that the paper also puts a lot of emphasis in using **batch normalisation**, but it was already implemented in the code provided in the examples. It also suggests to use the **Adam optimizer**, which the example code already uses by default.
 

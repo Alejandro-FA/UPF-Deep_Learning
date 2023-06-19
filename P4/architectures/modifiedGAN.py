@@ -1,4 +1,6 @@
-"""Definition for a Generative Adversarial Network model.
+"""Definition for a Generative Adversarial Network model. It applies the
+suggestions found in the UNSUPERVISED REPRESENTATION LEARNING WITH DEEP
+CONVOLUTIONAL GENERATIVE ADVERSARIAL NETWORKS paper.
 """
 
 import torch
@@ -12,26 +14,33 @@ from .GenerativeModel import *
 
 # Discriminator similar to VAE encoder
 class Discriminator(nn.Module):
-    def __init__(self, out_features=1, base_channels=32, image_channels=1):
+    def __init__(self, out_features=1, base_channels=32, image_channels=1, drop_ratio=0):
         super(Discriminator, self).__init__()
         self.main = nn.Sequential(
-            # # input is ``(image_channels) x 64 x 64``
-            # nn.Conv2d(image_channels, base_channels, 4, 2, 1, bias=False),
-            # nn.LeakyReLU(0.2, inplace=True),
-            # state size. ``(ndf) x 32 x 32``
-            nn.Conv2d(image_channels, base_channels * 2, 4, 2, 1, bias=False),
+            # input is ``(image_channels) x 32 x 32``
+            nn.Conv2d(image_channels, base_channels, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout(p=drop_ratio),
+            # state size. ``(ndf) x 16 x 16``
+            nn.Conv2d(base_channels, base_channels * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(base_channels * 2),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. ``(ndf*2) x 16 x 16``
+            nn.Dropout(p=drop_ratio),
+            # state size. ``(ndf*2) x 8 x 8``
             nn.Conv2d(base_channels * 2, base_channels * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(base_channels * 4),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. ``(ndf*4) x 8 x 8``
-            nn.Conv2d(base_channels * 4, base_channels * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(base_channels * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. ``(ndf*8) x 4 x 4``
-            nn.Conv2d(base_channels * 8, 1, 4, 1, 0, bias=False),
+            nn.Dropout(p=drop_ratio),
+            # state size. ``(ndf*4) x 4 x 4``
+            
+            # # NOTE: Commented because or images are 32 x 32, not 64 x 64
+            # nn.Conv2d(base_channels * 4, base_channels * 8, 4, 2, 1, bias=False),
+            # nn.BatchNorm2d(base_channels * 8),
+            # nn.LeakyReLU(0.2, inplace=True),
+            # # state size. ``(ndf*8) x 2 x 2``
+            
+            nn.Conv2d(base_channels * 4, 1, 4, 1, 0, bias=False),
+            nn.Dropout(p=drop_ratio),
             nn.Sigmoid()
         )
 
@@ -42,30 +51,33 @@ class Discriminator(nn.Module):
 
 # Generator is defined as VAE decoder
 class Generator(nn.Module):
-    def __init__(self, in_features, image_channels = 1, base_channels=32):
+    def __init__(self, in_features=32, base_channels=32, image_channels=1):
         super(Generator, self).__init__()
         self.in_features = in_features
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d( in_features, base_channels * 8, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(base_channels * 8),
-            nn.ReLU(True),
-            # state size. ``(base_channels*8) x 4 x 4``
-            nn.ConvTranspose2d(base_channels * 8, base_channels * 4, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d( in_features, base_channels * 4, 4, 1, 0, bias=False),
             nn.BatchNorm2d(base_channels * 4),
-            nn.ReLU(True),
-            # state size. ``(base_channels*4) x 8 x 8``
+            nn.ReLU(inplace=True),
+
+            # # NOTE: Commented because or images are 32 x 32, not 64 x 64
+            # # state size. ``(base_channels*8) x 2 x 2``
+            # nn.ConvTranspose2d(base_channels * 8, base_channels * 4, 4, 2, 1, bias=False),
+            # nn.BatchNorm2d(base_channels * 4),
+            # nn.ReLU(inplace=True),
+
+            # state size. ``(base_channels*4) x 4 x 4``
             nn.ConvTranspose2d( base_channels * 4, base_channels * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(base_channels * 2),
-            nn.ReLU(True),
-            # state size. ``(base_channels*2) x 16 x 16``
-            nn.ConvTranspose2d( base_channels * 2, image_channels, 4, 2, 1, bias=False),
-            # nn.BatchNorm2d(base_channels),
-            # nn.ReLU(True),
-            # # state size. ``(base_channels) x 32 x 32``
-            # nn.ConvTranspose2d( base_channels, image_channels, 4, 2, 1, bias=False),
+            nn.ReLU(inplace=True),
+            # state size. ``(base_channels*2) x 8 x 8``
+            nn.ConvTranspose2d( base_channels * 2, base_channels, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(base_channels),
+            nn.ReLU(inplace=True),
+            # state size. ``(base_channels) x 16 x 16``
+            nn.ConvTranspose2d( base_channels, image_channels, 4, 2, 1, bias=False),
             nn.Tanh()
-            # state size. ``(nc) x 64 x 64``
+            # state size. ``(nc) x 32 x 32``
         )
 
     def forward(self, x):
@@ -75,7 +87,7 @@ class Generator(nn.Module):
 class GAN(nn.Module, GenerativeModel):
     def __init__(self, in_features=32, base_channels=16):
         super(GAN, self).__init__()
-        self.discriminator = Discriminator(base_channels=base_channels)
+        self.discriminator = Discriminator(base_channels=base_channels, drop_ratio=0.2)
         self.generator = Generator(in_features, base_channels=base_channels)
         self.weights_init()
 
