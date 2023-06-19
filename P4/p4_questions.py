@@ -51,16 +51,18 @@ plot_every = 200 # During training, plot results every {plot_every} epochs
 device = mtw.get_torch_device(use_gpu=True, debug=True)
 torch.manual_seed(10)
 if device != torch.device("cpu"):
-    dataloader_workers = 6 # The amount of processes used to load data in parallel. In case of doubt use 0.
+    dataloader_workers = 4 # The amount of processes used to load data in parallel. In case of doubt use 0.
 else:
     dataloader_workers = 0
 print(f"The dataloader will use {dataloader_workers} parallel workers.")
-output_resolution = 32
+output_resolution = 64
 num_val_images = 25
 
 explore_dataset = False
 train_vae = False
 train_gan = True
+
+load_gan_checkpoint = False
 
 """Create a data loader for the face images dataset"""
 class FacesDB(torch.utils.data.Dataset):
@@ -130,10 +132,6 @@ test_loader = torch.utils.data.DataLoader(
     shuffle=False
 )
 
-
-# Create an IO manager instance to save and load model checkpoints
-iomanager = mtw.IOManager(storage_dir=results_path + '/models/') # FIXME: not used
-        
 
 """# Ex. 1
 
@@ -479,6 +477,8 @@ def train_GAN(gan: GAN, train_loader, optimizer_gen, optim_disc,
 if train_gan:
     # Define Geneartor and Discriminator networks
     gan = GAN(in_features=output_resolution)
+    if load_gan_checkpoint:
+        gan.load_state_dict(torch.load(f"{results_path}/{gan.name}_ck.ckpt"))
 
     #Initialize indepdent optimizer for both networks
     learning_rate_gen = .0002
