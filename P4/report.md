@@ -47,8 +47,6 @@ As we can see, the reconstruction loss deacreases until its convergence. However
 
 ## Generated and reconstructed images
 
-<span style="color:red">Discuss the different visualizations by analysing their relation with the evolution of the reconstruction loss and the KL regularization term.</span>
-
 The following images show the reconstructed images of the VAE for the 20th and 100th training epoch along with the original ones.
 
 As we can see, the quality of the faces significantly improve as the training iterations increase (as expected). Nevertheless, it is courious that the model with just 20 training epochs manages to somehow guess the orientation and shape of the target faces.
@@ -59,11 +57,11 @@ As for the generated images, we can also percieve a difference between the diffe
 
 ### Generated images at epoch 20
 
-<img src="Results/images/VAE/VAE_generated_images_e20.png" style="zoom:25%"></img>
+<img src="Results/images/VAE/VAE_generated_images_e20.png" style="zoom:5%"></img>
 
 ### Generated images at epoch 100
 
-<img src="Results/images/VAE/VAE_generated_images_e100.png" style="zoom:25%"></img>
+<img src="Results/images/VAE/VAE_generated_images_e100.png" style="zoom:5%"></img>
 
 We can clearly see that at the beginning, the generated images are more generic and similar between them. But as we leave the model training for more epochs, the results are more realistic and varied between one another.
 
@@ -85,7 +83,6 @@ This table shows a final summary of the final values that were used to train our
 
 # Exercise 2
 
-<span style="color:red">Discuss the different visualizations by analysing their relation between their quality and the evolution of the discriminator and generator losses.</span>
 
 We started exercise 2 with the same naïve approach of copying the code used in the example notebook. With a minor modifications we were able to adapt it to the CK dataset. However, we immediately encountered one big problem, the training process was **very unstable**. This meant that after some training epochs, both the generator and discriminator loss encountered **numerical issues** (reaching a value of infinity). Furthermore, we also observed big spikes in the training loss and little signs of convergence (when the model was able to train for some epochs before crashing).
 
@@ -103,11 +100,10 @@ Our next step was to unbalance the training and train the Discriminator for $k$ 
 
 At this point it was time to do some research. We found a well-known paper (Radford et al., 2016) that provides some simple tips to improve the stability of GAN training, and they call the result DCGAN. Since the guidelines provided were simple enough, we decided to give it a try. Furthermore, we also found a pytorch tutorial (https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html) in which they explain how to implement the suggestions of the paper. These are all the tips that we tried:
 
-<span style="color:red">Modify this depending on what we decide to do in the end</span>
 
 - Randomly **initialise the model weights** from a Normal distribution with `mean=0`, `stdev=0.02`.
 
-- Use the `LeakyReLU` activation function for the discriminator, instead of `ReLU`.
+- Use the `LeakyReLU` activation function for the discriminator, instead of `ReLU`, with a slope of `0.2`.
 
 - Use a `tanh` activation for the output of the generator instead of a `sigmoid`. This change has a very positive effect in avoiding numerical instability.
 
@@ -117,9 +113,38 @@ At this point it was time to do some research. We found a well-known paper (Radf
 
 - In the Adam optimizer, use `beta1=0.5` instead of the default `0.9` value.
 
-Additionally, we have also used dropout of `0.2`  (<span style="color:red">Adjust this to final value used</span>) between each layer of the Discriminator, since it is another good practice of Deep Learning that has shown good results in all of the previous practices of the subject). We do not use dropout in the Generator because we have read that it can hinder its performance.
+Additionally, we have also used dropout of `0.1` between each layer of the Discriminator, since it is another good practice of Deep Learning that has shown good results in all of the previous practices of the subject). We do not use dropout in the Generator because we have read that it can hinder its performance.
 
 It should be noted that the paper also puts a lot of emphasis in using **batch normalisation**, but it was already implemented in the code provided in the examples. It also suggests to use the **Adam optimizer**, which the example code already uses by default.
+
+## Results
+
+Having implemented all the previously mentioned measures, we could observe a significant stabilization during training. We could train the model for many epochs without having numerical problems anymore. The following image shows both the generator and discriminartor loss evolution during the $2000$ training epochs.
+
+<img src="Results/images/../gan_loss_evolution_smoothed.png" style="zoom:50%"></img>
+
+As it can be observed, the generator loss increases more than we initally expected. This could mean that the generator should be training more than the discriminator in some phases, but as we mentioned before, due to issues on stabilizing the training we were not able to do so.
+
+Despite the increase of the generator loss, the results at each epoch get better (as it is discussed in the following section). We strongly believe this to happen because the generator and the discriminator are unbalanced. Therefore since the generator loss depends directly on the discriminator's performance, it increases but it does not mean that the generated faces are worse as we will see next.
+
+### Generated images
+As we can observe in following figure, most of the generated images at epoch 200 have somehow the structure of a face since the nose, the eyes and the mouth are well defined. Despite this, the faces are still very distorted. 
+
+<img src="Results/images/GAN/GAN_generated_images_e200.png" style="zoom:5%"></img>
+
+One thousand epochs after the previous generations, we can observe how the model has noticeably improved. The biggest difference between both figures is that the faces of the latter are much smoother than before. Despite they have a lot of distortion yet, they keep the face structure and some of them have a clear representation of the eyes, the nose and the mouth. 
+
+Something that has surprised us is that the model has been able to generate some faces with glasses which are quite well defined at this stage of the training.
+
+<img src="Results/images/GAN/GAN_generated_images_e1200.png" style="zoom:5%"></img>
+
+These are the faces generated in the last epoch. As we can observe there is not a significant difference between the epoch `1200` and the `2000`. This was something we could envision from the loss, since it does not improve significantly from epoch `1000`. 
+
+
+Despite the results are similar, the structure of the faces is better defined for most of the cases.
+<img src="Results/images/GAN/GAN_generated_images_e2000.png" style="zoom:5%"></img>
+
+
 
 ## References and Resources
 

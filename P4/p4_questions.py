@@ -482,7 +482,7 @@ if train_gan:
 
     #Initialize indepdent optimizer for both networks
     learning_rate_gen = .0002
-    learning_rate_disc = .0002 # FIXME: What about making the discriminator learn quicker
+    learning_rate_disc = .0002 
     optimizer_gen = torch.optim.Adam(gan.generator.parameters(), lr = learning_rate_gen, weight_decay=1e-5, betas=(0.5, 0.999))
     optimizer_disc = torch.optim.Adam(gan.discriminator.parameters(), lr = learning_rate_disc, weight_decay=1e-5, betas=(0.5, 0.999))
 
