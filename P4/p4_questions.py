@@ -109,7 +109,6 @@ if explore_dataset:
 tr_training = transforms.Compose([
     transforms.Resize((output_resolution, output_resolution)),
     transforms.ToTensor(),  # convert image to pytorch tensor [0..,1]
-    # transforms.Normalize(mean=0.5, std=0.5), # NOTE: Darkens the images a lot
 ])
 
 
@@ -156,26 +155,6 @@ test_loader = torch.utils.data.DataLoader(
 def kl_divergence(z_mean, z_log_var):
     kl_loss = 0.5 * torch.sum((torch.exp(z_log_var) + z_mean**2 - 1.0 - z_log_var), axis=1)
     return kl_loss.mean()
-
-
-# TODO: remove
-def compute_train_reconstruction_error(vae, train_loader):
-    rec_loss_avg = 0
-    criterion = nn.MSELoss()
-    n_batches = 0
-    for images in train_loader:
-        # Get batch of samples and labels
-        images = images.to(device)
-
-        # Forward pass
-        z_mean, _ = vae.encode(images)
-        x_rec = vae.decoder(z_mean)
-        reconstruction_loss = criterion(x_rec, images)
-        rec_loss_avg += reconstruction_loss.cpu().item()
-        n_batches += 1
-
-    return rec_loss_avg / n_batches
-
 
 def plot_reconstructed_images(vae, test_loader, epoch):
     test_images = next(iter(test_loader))
