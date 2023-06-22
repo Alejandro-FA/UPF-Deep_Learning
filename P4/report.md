@@ -45,25 +45,27 @@ The following image shows both the reconstruction and the KL loss evolution duri
 As we can see, the reconstruction loss deacreases until its convergence. However, it is more interesting to observe the behaviour of the KL loss. After a period of decreasing, it starts increasing in the middle of the training phase. If we look at the curve, it looks like a significant change. However, by observing the y-axis scale we realize that the growth is not that excessive and thus it does not affect to the performance of the overall model.
 
 
-## Generated and reconstructed images
+## Reconstructed images
 
 The following images show the reconstructed images of the VAE for the 20th and 100th training epoch along with the original ones.
 
-As we can see, the quality of the faces significantly improve as the training iterations increase (as expected). Nevertheless, it is courious that the model with just 20 training epochs manages to somehow guess the orientation and shape of the target faces.
-
 <img src="Results/images/VAE/VAE_reconstructed.png" style="zoom:25%"></img>
 
-As for the generated images, we can also percieve a difference between the different training epochs.
+As we can see, the quality of the faces significantly improve as the training iterations increase (as expected). Although the tonality of contour of the face was already captured at epoch 20, at epoch 100 we see that there is a noticeable increase in the details of the image. However, not all reconstructed faces are similar to the original images, but adding more trainig epochs has not resulted in better results.
 
-### Generated images at epoch 20
+## Generated images
+
+Generated images at epoch 20:
 
 <img src="Results/images/VAE/VAE_generated_images_e20.png" style="zoom:5%"></img>
 
-### Generated images at epoch 100
+Generated images at epoch 100:
 
 <img src="Results/images/VAE/VAE_generated_images_e100.png" style="zoom:5%"></img>
 
-We can clearly see that at the beginning, the generated images are more generic and similar between them. But as we leave the model training for more epochs, the results are more realistic and varied between one another.
+As it was the case for the reconstructed images, we can also perceive an improvement in the generated images. We can clearly see that at the beginning, the faces are more generic and similar between them. But as we leave the model training for more epochs, the results appear to be better and they are far less generic. More details are present in the faces and there is an increased perception of realism.
+
+## Training summary
 
 This table shows a final summary of the final values that were used to train our VAE:
 
@@ -72,12 +74,11 @@ This table shows a final summary of the final values that were used to train our
 | Batch size                           | $2500$                  |
 | Epochs                               | $100$                    |
 | Learning rate                        | $0.0005$                  |
-| KL weight                        | $0.01$                  |
+| KL weight                        | $0.001$                  |
 | Optimizer                            | $\text{Adam}$           |
 | Weight decay                         | $1\cdot 10^{-5}$       |
 | Loss function                        | $\text{MSE loss}$ and $\text{KL loss}$|
 | Dropout                              | $0.2$                 |
-
 
 
 
@@ -92,9 +93,9 @@ We started exercise 2 with the same naïve approach of copying the code used in 
 
 When we were playing with the base code provided in the examples, we had one execution in which the model didn't explode due to numerical instability. Furthermore, both the Generator loss and the Discriminator loss converged to a similar value. However, the generated images were horrendous, more monster-like than human-like. **Our conclusion of this result was that the performance of the Discriminator was very poor, and that perhaps we needed to train it more than the Generator**.
 
-By default, the example code intercalates training between the Generator and the Discriminator every batch. Our first modification was to change this from every batch to every epoch, since we had enough computational resources to run the model for a large number of epochs. We changed this because we believed that training with the whole dataset instead of just a batch could improve stability. However, this modification did not result in any noticeable improvement.
+By default, the example code intercalates training between the Generator and the Discriminator every batch. Our first modification was to change this from every batch to every epoch, since we had enough computational resources to run the model for a large number of epochs. We changed this because we believed that training with the whole dataset instead of just a batch could improve stability. However, this modification alone did not result in any noticeable improvement. However, after having implemented some additional modifications mentioned in the following section, we were able to conclude that this solution had better performance than the original one.
 
-Our next step was to unbalance the training and train the Discriminator for $k$ epochs, and then train the generator for just $1$ epoch. We have tried with values for $k$ in the range of $[2, 10]$, but none of them have helped to stabilise the training.
+Our next step was to unbalance the training and train the Discriminator for $k$ epochs, and then train the generator for just $1$ epoch. We have tried with values for $k$ in the range of $[2, 10]$, but none of them have helped to stabilise the training nor to improve the quality of the generated images.
 
 ### Research about common GAN-training practices
 
@@ -113,9 +114,15 @@ At this point it was time to do some research. We found a well-known paper (Radf
 
 - In the Adam optimizer, use `beta1=0.5` instead of the default `0.9` value.
 
-Additionally, we have also used dropout of `0.1` between each layer of the Discriminator, since it is another good practice of Deep Learning that has shown good results in all of the previous practices of the subject). We do not use dropout in the Generator because we have read that it can hinder its performance.
-
 It should be noted that the paper also puts a lot of emphasis in using **batch normalisation**, but it was already implemented in the code provided in the examples. It also suggests to use the **Adam optimizer**, which the example code already uses by default.
+
+### Additional measures of our own
+
+We have also used a dropout of `0.1` between each layer of the Discriminator, since it is another good practice of Deep Learning that has shown good results in all of the previous practices of the subject. We have tested higher values of dropout as well, but anything higher than `0.3` resulted in some distortion in the output images.
+
+We have also tested adding dropout to the generator, but even small percentages of dropout produce certain artifacts in the images. While searching a little bit on the internet we read that it is uncommon to use dropout in the Generator because it can hinder its performance.
+
+Finally, since we had enough computational resources, we have also tried to run the GAN without resizing the input images to `32x32`, and leave them at their default resolution of `64x64`. Although the training process becomes slower, the results are a bit better, so we have decided to keep the original resolution.
 
 ## Results
 
@@ -123,30 +130,47 @@ Having implemented all the previously mentioned measures, we could observe a sig
 
 <img src="Results/images/../gan_loss_evolution_smoothed.png" style="zoom:50%"></img>
 
-As it can be observed, the generator loss increases more than we initally expected. This could mean that the generator should be training more than the discriminator in some phases, but as we mentioned before, due to issues on stabilizing the training we were not able to do so.
+As it can be observed, the generator loss increases more than we initally expected. We are not entirely sure about how to interpret this result, but it could mean that the generator should be training more than the discriminator in some phases. However we tried using a training ratio of 1:2 (for each epoch that the discriminator is trained, the generator trains for two), but the training process was more unstable and the results were worse. We also tried to follow this ratio after 1000 epochs of 1:1 training, but it was a failure as well.
 
-Despite the increase of the generator loss, the results at each epoch get better (as it is discussed in the following section). We strongly believe this to happen because the generator and the discriminator are unbalanced. Therefore since the generator loss depends directly on the discriminator's performance, it increases but it does not mean that the generated faces are worse as we will see next.
+However, it should be noted that despite the increase of the generator loss, the results at each epoch get better (more information about the images in the following section). So our conclusion has been that this result simply comes from the adversarial nature of GANs. Since the generator loss depends directly on the discriminator's performance (and the discriminator gets better at every step), it increases but it does not necessarily mean that the generated faces are getting worse (as we will see next).
 
-### Generated images
-As we can observe in following figure, most of the generated images at epoch 200 have somehow the structure of a face since the nose, the eyes and the mouth are well defined. Despite this, the faces are still very distorted. 
+This is not an ideal result though, the generator loss should decrease more, but perhaps we've reached a limitation of the architecture of the generator. It is important to realise that the generator that we use is a very simple CNN, and perhaps a more complex architecture would improve the results. We leave this research as future work.
+
+## Generated images
+
+As we can observe in following figure, most of the generated images at **epoch 200** have somehow the structure of a face since the nose, the eyes and the mouth are well defined. Despite this, the faces are still very distorted. 
 
 <img src="Results/images/GAN/GAN_generated_images_e200.png" style="zoom:5%"></img>
 
-One thousand epochs after the previous generations, we can observe how the model has noticeably improved. The biggest difference between both figures is that the faces of the latter are much smoother than before. Despite they have a lot of distortion yet, they keep the face structure and some of them have a clear representation of the eyes, the nose and the mouth. 
+At the **epoch 1200**, we can observe how the model has noticeably improved. The biggest difference between both figures is that the faces of the latter are much smoother than before. Despite they have a lot of distortion yet, they keep the face structure and some of them have a clear representation of the eyes, the nose and the mouth. 
 
-Something that has surprised us is that the model has been able to generate some faces with glasses which are quite well defined at this stage of the training.
+Something that has surprised us is that the model has been able to generate some faces with glasses which are quite well defined at this stage of the training. This has only happened when using a resolution  of `64x64`. When we tried a resolution of `32x32` we did not see any sort of glasses.
 
 <img src="Results/images/GAN/GAN_generated_images_e1200.png" style="zoom:5%"></img>
 
-These are the faces generated in the last epoch. As we can observe there is not a significant difference between the epoch `1200` and the `2000`. This was something we could envision from the loss, since it does not improve significantly from epoch `1000`. 
+Finally, the following image shows the faces generated in the **last epoch (2000)**. As we can observe, there is not a significant difference between the epoch `1200` and the `2000`. This was something we could envision from the loss, since it does not improve significantly from epoch `1000`.  Despite the results are similar, the structure of the faces is better defined for most of the cases.
 
-
-Despite the results are similar, the structure of the faces is better defined for most of the cases.
 <img src="Results/images/GAN/GAN_generated_images_e2000.png" style="zoom:5%"></img>
 
+## Training summary
+
+This table shows a final summary of the final values that were used to train our VAE:
+
+| Parameter                            | Value                  |
+| ------------------------------------ | ---------------------- |
+| Batch size                           | $2500$                  |
+| Epochs                               | $2000$                    |
+| Learning rate                        | $0.0002$ (both the Discriminator and the Generator)                 |
+| Optimizer                            | $\text{Adam}$ with $\beta_1 = 0.5$          |
+| Weight decay                         | $1\cdot 10^{-5}$       |
+| Loss function                        | $\text{mini-max loss}$|
+| Dropout                              | $0.1$ for the Discriminator                 |
+| Resolution of images | $64 \times 64$|
+| Activation function | LeakyReLU for the Discriminator, ReLU for the Generator |
+| Training ratio (Discriminator:Generator) | $1:1$ |
 
 
-## References and Resources
+# References and Resources
 
 In our process of stabilizing the learning process of the GAN, we have consulted the following resources which we have found useful.
 
